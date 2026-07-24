@@ -1190,3 +1190,44 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
+
+    // ============================================================
+    // 每日一言
+    // ============================================================
+    (function initDailyQuote() {
+      // 今日日期
+      const now = new Date();
+      const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      const dateStr = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日 · ' + weekDays[now.getDay()];
+      document.getElementById('daily-date').textContent = '📅 ' + dateStr;
+
+      const todayKey = 'anime-quote-' + now.toISOString().slice(0, 10);
+
+      // 尝试从缓存读取今日台词
+      const cached = localStorage.getItem(todayKey);
+      if (cached) {
+        try {
+          const q = JSON.parse(cached);
+          document.getElementById('daily-text').textContent = q.hitokoto;
+          document.getElementById('daily-from').textContent = q.from;
+          return;
+        } catch (e) { /* 缓存损坏，重新请求 */ }
+      }
+
+      // 请求新台词
+      fetch('https://hi.logacg.com/?c=b')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.hitokoto) {
+            document.getElementById('daily-text').textContent = data.hitokoto;
+            document.getElementById('daily-from').textContent = data.from || '';
+            localStorage.setItem(todayKey, JSON.stringify({ hitokoto: data.hitokoto, from: data.from || '' }));
+            // 清理旧缓存
+            Object.keys(localStorage).forEach(k => { if (k.startsWith('anime-quote-') && k !== todayKey) localStorage.removeItem(k); });
+          }
+        })
+        .catch(() => {
+          document.getElementById('daily-text').textContent = '人は誰でも、自分が思っているより強くなれる。';
+          document.getElementById('daily-from').textContent = '火影忍者';
+        });
+    })();

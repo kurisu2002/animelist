@@ -120,6 +120,37 @@
       margin-top: 4px;
     }
 
+    /* ===== 每日一言 ===== */
+    .daily-quote {
+      max-width: 1200px;
+      margin: 12px auto 0;
+      padding: 0 24px;
+      text-align: center;
+    }
+    .daily-date {
+      font-size: .82rem;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      letter-spacing: .5px;
+    }
+    .daily-text {
+      font-size: .95rem;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 1.6;
+      font-style: italic;
+      position: relative;
+      display: inline;
+    }
+    .daily-text::before { content: '\201C'; color: var(--primary); }
+    .daily-text::after { content: '\201D'; color: var(--primary); }
+    .daily-from {
+      font-size: .78rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+    .daily-from::before { content: '—— '; }
+
     /* ===== 主要内容区 ===== */
     .main {
       max-width: 1200px;
@@ -889,9 +920,12 @@
       .anime-search-wrap input { background: rgba(30,41,59,0.38); }
       .pagination .page-jump input { background: rgba(30,41,59,0.38); }
       .auth-modal .auth-input { background: rgba(30,41,59,0.38); }
+      .daily-text { color: #e2e8f0; }
     }
 
     @media (max-width: 640px) {
+      .daily-quote { padding: 0 16px; }
+      .daily-text { font-size: .85rem; }
       .header { padding: 12px 16px; }
       .header-inner { gap: 8px; }
       .logo { font-size: 1.2rem; }
