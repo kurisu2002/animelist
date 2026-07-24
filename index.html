@@ -158,34 +158,73 @@
       padding: 10px 16px 10px 40px;
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      background: var(--card-bg);
+      background: rgba(255,255,255,0.38);
       color: var(--text);
       font-size: .95rem;
       transition: border-color .2s, box-shadow .2s;
+      backdrop-filter: blur(4px);
     }
     .search-box input:focus {
       outline: none;
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(99,102,241,.2);
     }
+    @media (prefers-color-scheme: dark) {
+      .search-box input { background: #1e293b; }
+    }
     .search-box .search-icon {
       position: absolute;
       left: 12px;
       top: 50%;
       transform: translateY(-50%);
-      color: var(--text-secondary);
+      color: var(--text);
       font-size: 1.1rem;
+      opacity: 1;
+      z-index: 1;
     }
-    .filter-select {
+    /* ===== 自定义下拉选择器 ===== */
+    .custom-select {
+      position: relative;
+      user-select: none;
+    }
+    .custom-select-trigger {
       padding: 10px 16px;
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      background: var(--card-bg);
+      background: rgba(255,255,255,0.38);
       color: var(--text);
       font-size: .95rem;
       cursor: pointer;
+      backdrop-filter: blur(4px);
+      white-space: nowrap;
+      transition: border-color .2s;
+      min-width: 145px;
     }
-    .filter-select:focus { outline: none; border-color: var(--primary); }
+    .custom-select-trigger:hover { border-color: var(--primary); }
+    .custom-select-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      z-index: 300;
+      box-shadow: var(--shadow-lg);
+      display: none;
+    }
+    .custom-select-dropdown.open { display: block; }
+    .custom-select-option {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: .9rem;
+      color: var(--text);
+      transition: background .15s;
+    }
+    .custom-select-option:hover { background: rgba(99,102,241,0.12); }
+    .custom-select-option.selected { background: rgba(99,102,241,0.18); font-weight: 600; }
 
     .btn {
       padding: 10px 20px;
@@ -275,6 +314,7 @@
     }
     table {
       width: 100%;
+      table-layout: fixed;
       border-collapse: collapse;
       min-width: 700px;
     }
@@ -327,7 +367,6 @@
     }
     /* ===== 拖动排序 ===== */
     .sortable-row {
-      cursor: grab;
       user-select: none;
       -webkit-user-select: none;
     }
@@ -830,6 +869,8 @@
       .logo { background: rgba(30,41,59,0.38); }
       .user-badge { background: rgba(30,41,59,0.38); }
       .btn-outline { background: rgba(30,41,59,0.38); }
+      .custom-select-trigger { background: rgba(30,41,59,0.38); }
+      .custom-select-dropdown { background: rgba(30,41,59,0.72); }
       .stat-card { background: rgba(30,41,59,0.38); }
       .add-panel { background: rgba(30,41,59,0.45); }
       .table-wrapper { background: rgba(30,41,59,0.38); }
@@ -956,14 +997,17 @@
         <span class="search-icon">🔍</span>
         <input type="text" id="search-input" placeholder="搜索番剧名称..." oninput="renderTable()">
       </div>
-      <select class="filter-select" id="filter-status" onchange="filterByStatus(this.value)">
-        <option value="全部">📋 全部状态</option>
-        <option value="想看">👀 想看</option>
-        <option value="在看">📺 在看</option>
-        <option value="看完">✅ 看完</option>
-        <option value="搁置">⏸️ 搁置</option>
-        <option value="弃番">🚫 弃番</option>
-      </select>
+      <div class="custom-select" id="filter-status-select">
+        <div class="custom-select-trigger" onclick="toggleCustomSelect()">📋 全部状态</div>
+        <div class="custom-select-dropdown" id="filter-dropdown">
+          <div class="custom-select-option selected" data-value="全部" onclick="selectCustomOption('全部', '📋 全部状态')">📋 全部状态</div>
+          <div class="custom-select-option" data-value="想看" onclick="selectCustomOption('想看', '👀 想看')">👀 想看</div>
+          <div class="custom-select-option" data-value="在看" onclick="selectCustomOption('在看', '📺 在看')">📺 在看</div>
+          <div class="custom-select-option" data-value="看完" onclick="selectCustomOption('看完', '✅ 看完')">✅ 看完</div>
+          <div class="custom-select-option" data-value="搁置" onclick="selectCustomOption('搁置', '⏸️ 搁置')">⏸️ 搁置</div>
+          <div class="custom-select-option" data-value="弃番" onclick="selectCustomOption('弃番', '🚫 弃番')">🚫 弃番</div>
+        </div>
+      </div>
       <button class="btn btn-outline btn-sm" onclick="loadAnimes()" title="刷新数据">🔄 刷新</button>
     </div>
 
@@ -971,6 +1015,13 @@
     <div class="table-wrapper">
       <div class="table-scroll">
         <table>
+          <colgroup>
+            <col style="width:38%">
+            <col style="width:24%">
+            <col style="width:13%">
+            <col style="width:10%">
+            <col style="width:15%">
+          </colgroup>
           <thead>
             <tr>
               <th>番剧名称</th>
@@ -1519,8 +1570,39 @@
     let currentPage = 1;
     const PAGE_SIZE = 20;
 
+    // ===== 自定义下拉选择器 =====
+    function getSelectedFilter() {
+      const sel = document.querySelector('.custom-select-option.selected');
+      return sel ? sel.dataset.value : '全部';
+    }
+
+    function toggleCustomSelect() {
+      const dd = document.getElementById('filter-dropdown');
+      dd.classList.toggle('open');
+    }
+    function selectCustomOption(value, label) {
+      document.getElementById('filter-dropdown').querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+      const opt = document.querySelector(`.custom-select-option[data-value="${value}"]`);
+      if (opt) opt.classList.add('selected');
+      document.querySelector('.custom-select-trigger').textContent = label;
+      document.getElementById('filter-dropdown').classList.remove('open');
+      filterByStatus(value);
+    }
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.custom-select')) {
+        document.getElementById('filter-dropdown').classList.remove('open');
+      }
+    });
+
     function filterByStatus(status) {
-      document.getElementById('filter-status').value = status;
+      // 更新自定义下拉的选中状态
+      const labels = { '全部': '📋 全部状态', '想看': '👀 想看', '在看': '📺 在看', '看完': '✅ 看完', '搁置': '⏸️ 搁置', '弃番': '🚫 弃番' };
+      document.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+      const opt = document.querySelector(`.custom-select-option[data-value="${status}"]`);
+      if (opt) opt.classList.add('selected');
+      document.querySelector('.custom-select-trigger').textContent = labels[status] || '📋 全部状态';
+
+      // 更新卡片高亮
       document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
       const statIndex = { '全部': 0, '在看': 1, '想看': 2, '看完': 3, '搁置': 4, '弃番': 5 };
       const cards = document.querySelectorAll('.stat-card');
@@ -1565,7 +1647,7 @@
 
     function renderTable() {
       const search = (document.getElementById('search-input').value || '').toLowerCase();
-      const filter = document.getElementById('filter-status').value;
+      const filter = getSelectedFilter();
 
       let filtered = allAnimes;
       if (search) {
@@ -2073,7 +2155,7 @@
 
       // 从当前页面显示的过滤后数据中获取排序信息
       const search = (document.getElementById('search-input').value || '').toLowerCase();
-      const filter = document.getElementById('filter-status').value;
+      const filter = getSelectedFilter();
       let filtered = allAnimes;
       if (search) filtered = filtered.filter(a => a.title.toLowerCase().includes(search));
       if (filter !== '全部') filtered = filtered.filter(a => a.status === filter);
