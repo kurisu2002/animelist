@@ -123,46 +123,51 @@
     /* ===== 每日一言 ===== */
     .daily-quote {
       max-width: 1200px;
-      margin: 12px auto 0;
-      padding: 0 24px;
+      margin: 6px auto 0;
+      padding: 12px 24px;
       text-align: center;
       position: relative;
+      background: rgba(255,255,255,0.35);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(4px);
+      box-shadow: var(--shadow);
     }
     .daily-date {
       font-size: .9rem;
-      font-weight: 500;
-      color: var(--text);
+      font-weight: 600;
+      color: var(--primary);
       margin-bottom: 4px;
       letter-spacing: .5px;
     }
     .daily-text {
-      font-size: .95rem;
+      font-size: 1rem;
       font-weight: 500;
       color: var(--text);
-      line-height: 1.6;
+      line-height: 1.7;
       font-style: italic;
       position: relative;
       display: inline;
     }
-    .daily-text::before { content: '\201C'; color: var(--primary); }
-    .daily-text::after { content: '\201D'; color: var(--primary); }
+    .daily-text::before { content: '\201C'; color: var(--primary); font-weight: 700; }
+    .daily-text::after { content: '\201D'; color: var(--primary); font-weight: 700; }
     .daily-from {
-      font-size: .88rem;
-      font-weight: 500;
-      color: var(--text);
-      margin-top: 2px;
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--primary-hover);
+      margin-top: 4px;
     }
     .daily-from::before { content: '—— '; }
     .daily-refresh {
       display: inline-block;
-      margin-top: 6px;
-      padding: 2px 8px;
+      margin-top: 8px;
+      padding: 3px 12px;
       border: 1px solid var(--border);
-      border-radius: 12px;
-      background: rgba(255,255,255,0.35);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.5);
       color: var(--text-secondary);
       cursor: pointer;
-      font-size: .75rem;
+      font-size: .78rem;
       transition: all .2s;
       backdrop-filter: blur(4px);
     }
@@ -952,15 +957,16 @@
       .anime-search-wrap input { background: rgba(30,41,59,0.38); }
       .pagination .page-jump input { background: rgba(30,41,59,0.38); }
       .auth-modal .auth-input { background: rgba(30,41,59,0.38); }
+      .daily-quote { background: rgba(30,41,59,0.35); }
       .daily-text { color: #e2e8f0; }
-      .daily-date { color: #e2e8f0; }
-      .daily-from { color: #cbd5e1; }
-      .daily-refresh { background: rgba(30,41,59,0.35); }
+      .daily-date { color: #818cf8; }
+      .daily-from { color: #a5b4fc; }
+      .daily-refresh { background: rgba(30,41,59,0.5); }
     }
 
     @media (max-width: 640px) {
-      .daily-quote { padding: 0 16px; }
-      .daily-text { font-size: .85rem; }
+      .daily-quote { padding: 10px 16px; margin: 4px 8px 0; }
+      .daily-text { font-size: .9rem; }
       .header { padding: 12px 16px; }
       .header-inner { gap: 8px; }
       .logo { font-size: 1.2rem; }
