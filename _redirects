@@ -1,0 +1,2 @@
+# 代理 Bangumi 图片服务器（lain.bgm.tv 在国内被墙）
+/bgm-img/*  https://lain.bgm.tv/:splat  200
