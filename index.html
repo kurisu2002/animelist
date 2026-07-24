@@ -350,12 +350,26 @@
       font-size: .9rem;
       text-align: center;
       transition: border-color .2s;
+      display: none;
     }
     .episode-input:focus {
       outline: none;
       border-color: var(--primary);
       box-shadow: 0 0 0 2px rgba(99,102,241,.2);
     }
+    .episode-input.active { display: inline-block; }
+    .episode-display {
+      min-width: 36px;
+      text-align: center;
+      font-weight: 600;
+      font-size: .95rem;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      transition: background .15s;
+      border: 1px solid transparent;
+    }
+    .episode-display:hover { background: var(--border); }
     .status-badge {
       display: inline-block;
       padding: 4px 12px;
@@ -1604,11 +1618,14 @@
                 ${item.notes ? `<small style="color:var(--text-secondary);">${escapeHtml(item.notes)}</small>` : ''}
               </td>
               <td>
-                <div style="display:flex;align-items:center;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;" class="episode-cell">
+                  <span class="episode-display" onclick="editEpisode(this, ${item.id})">${watched}</span>
                   <input type="number" value="${watched}" min="0" max="${maxEp || 9999}"
                     class="episode-input"
-                    onchange="updateField(${item.id}, 'watched_episodes', this.value)"
-                    onfocus="this.select()">
+                    data-id="${item.id}"
+                    onchange="updateField(${item.id}, 'watched_episodes', this.value);hideEpisodeInput(this)"
+                    onblur="hideEpisodeInput(this)"
+                    onkeydown="if(event.key==='Enter')this.blur()">
                   <span style="font-size:.85rem;color:var(--text-secondary);white-space:nowrap;">
                     / ${maxEp || '?'}
                   </span>
@@ -1692,6 +1709,25 @@
       if (submitBtn) submitBtn.textContent = '💾 保存修改';
       toggleAddPanel(true);
       document.getElementById('input-title').focus();
+    }
+
+    // 点击显示集数输入框
+    function editEpisode(span, id) {
+      const cell = span.closest('.episode-cell');
+      const input = cell.querySelector('.episode-input');
+      span.style.display = 'none';
+      input.classList.add('active');
+      input.focus();
+      input.select();
+    }
+
+    // 隐藏集数输入框，更新显示值
+    function hideEpisodeInput(input) {
+      const cell = input.closest('.episode-cell');
+      const span = cell.querySelector('.episode-display');
+      input.classList.remove('active');
+      span.textContent = input.value || '0';
+      span.style.display = '';
     }
 
     function escapeHtml(str) {
