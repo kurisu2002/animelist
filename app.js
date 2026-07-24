@@ -90,7 +90,6 @@
         try { await supabaseClient.auth.signOut(); } catch (e) { /* ignore */ }
       }
       document.getElementById('user-badge').style.display = 'none';
-      document.getElementById('logout-btn').style.display = 'none';
       document.getElementById('user-info-line').style.display = 'none';
       allAnimes = [];
       renderTable();
@@ -1194,24 +1193,31 @@
     // ============================================================
     // 每日一言
     // ============================================================
-    (function initDailyQuote() {
-      // 今日日期
-      const now = new Date();
-      const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-      const dateStr = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日 · ' + weekDays[now.getDay()];
-      document.getElementById('daily-date').textContent = '📅 ' + dateStr;
+    let quoteCache = null;
 
+    function fetchQuote(forceNew) {
+      const now = new Date();
       const todayKey = 'anime-quote-' + now.toISOString().slice(0, 10);
 
-      // 尝试从缓存读取今日台词
-      const cached = localStorage.getItem(todayKey);
-      if (cached) {
-        try {
-          const q = JSON.parse(cached);
-          document.getElementById('daily-text').textContent = q.hitokoto;
-          document.getElementById('daily-from').textContent = q.from;
-          return;
-        } catch (e) { /* 缓存损坏，重新请求 */ }
+      // 非强制刷新时，优先用内存缓存
+      if (!forceNew && quoteCache && quoteCache.key === todayKey) {
+        document.getElementById('daily-text').textContent = quoteCache.hitokoto;
+        document.getElementById('daily-from').textContent = quoteCache.from;
+        return;
+      }
+
+      // 非强制刷新时，尝试 localStorage 缓存
+      if (!forceNew) {
+        const cached = localStorage.getItem(todayKey);
+        if (cached) {
+          try {
+            const q = JSON.parse(cached);
+            quoteCache = { key: todayKey, ...q };
+            document.getElementById('daily-text').textContent = q.hitokoto;
+            document.getElementById('daily-from').textContent = q.from;
+            return;
+          } catch (e) { /* 缓存损坏 */ }
+        }
       }
 
       // 请求新台词
@@ -1221,6 +1227,7 @@
           if (data && data.hitokoto) {
             document.getElementById('daily-text').textContent = data.hitokoto;
             document.getElementById('daily-from').textContent = data.from || '';
+            quoteCache = { key: todayKey, hitokoto: data.hitokoto, from: data.from || '' };
             localStorage.setItem(todayKey, JSON.stringify({ hitokoto: data.hitokoto, from: data.from || '' }));
             // 清理旧缓存
             Object.keys(localStorage).forEach(k => { if (k.startsWith('anime-quote-') && k !== todayKey) localStorage.removeItem(k); });
@@ -1230,4 +1237,23 @@
           document.getElementById('daily-text').textContent = '人は誰でも、自分が思っているより強くなれる。';
           document.getElementById('daily-from').textContent = '火影忍者';
         });
+    }
+
+    function refreshQuote() {
+      // 清除今日缓存，强制拉新台词
+      const todayKey = 'anime-quote-' + new Date().toISOString().slice(0, 10);
+      localStorage.removeItem(todayKey);
+      quoteCache = null;
+      document.getElementById('daily-text').textContent = '加载中...';
+      document.getElementById('daily-from').textContent = '';
+      fetchQuote(true);
+    }
+
+    // 初始化
+    (function initDailyQuote() {
+      const now = new Date();
+      const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      const dateStr = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日 · ' + weekDays[now.getDay()];
+      document.getElementById('daily-date').textContent = '📅 ' + dateStr;
+      fetchQuote(false);
     })();
