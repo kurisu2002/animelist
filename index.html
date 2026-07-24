@@ -239,8 +239,13 @@
       gap: 6px;
       white-space: nowrap;
     }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-primary {
+      background: rgba(99,102,241,0.42);
+      color: #fff;
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(99,102,241,0.25);
+    }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); border-color: var(--primary-hover); }
     .btn-outline {
       background: rgba(255,255,255,0.38);
       border: 1px solid var(--border);
@@ -658,7 +663,7 @@
     /* ===== Header User ===== */
     .header-right {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 12px;
     }
     .user-group {
@@ -869,6 +874,7 @@
       .logo { background: rgba(30,41,59,0.38); }
       .user-badge { background: rgba(30,41,59,0.38); }
       .btn-outline { background: rgba(30,41,59,0.38); }
+      .btn-primary { background: rgba(99,102,241,0.32); }
       .custom-select-trigger { background: rgba(30,41,59,0.38); }
       .custom-select-dropdown { background: rgba(30,41,59,0.72); }
       .stat-card { background: rgba(30,41,59,0.38); }
