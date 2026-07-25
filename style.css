@@ -46,7 +46,7 @@
       position: fixed;
       inset: 0;
       z-index: -1;
-      background: url('background.jpg') center/cover no-repeat;
+      background: var(--bg) url('background.jpg') center/cover no-repeat;
     }
 
     /* ===== 顶部导航 ===== */
