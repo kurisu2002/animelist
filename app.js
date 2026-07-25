@@ -889,22 +889,17 @@
       searchResults.classList.add('open');
       searchResults.innerHTML = '<div class="search-loading">🔍 搜索中...</div>';
 
-      // 先尝试 Bangumi（中文名），失败则用 AniList
-      const bgmResult = await searchBangumi(query);
+      // 同时请求 Bangumi 和 AniList（合并展示，互补数据）
+      const [bgmResult, anilistResult] = await Promise.all([
+        searchBangumi(query),
+        searchAniList(query)
+      ]);
       if (id !== searchId) return;  // 已有新搜索，丢弃旧结果
-      if (bgmResult) {
-        searchResults.innerHTML = bgmResult;
-        return;
-      }
 
-      const anilistResult = await searchAniList(query);
-      if (id !== searchId) return;
-      if (anilistResult) {
-        searchResults.innerHTML = anilistResult;
-        return;
-      }
-
-      if (id === searchId) {
+      const combined = [bgmResult, anilistResult].filter(Boolean).join('');
+      if (combined) {
+        searchResults.innerHTML = combined;
+      } else {
         searchResults.innerHTML = '<div class="search-loading">⚠️ 搜索失败，请检查网络或手动填写</div>';
       }
     }
@@ -934,6 +929,7 @@
           const poster = item.poster || '';     // 大图：选番后填入表单
           const score = item.score || '';
           const date = item.air_date || '';
+          const bgmYear = (date || '').substring(0, 4); // 从 "2024-01-15" 提取年份
 
           return `
             <div class="search-result-item" onclick="selectAnimeBgm(${item.id})"
@@ -941,7 +937,8 @@
                  data-title="${escapeAttr(mainTitle)}"
                  data-episodes="${eps}"
                  data-poster="${escapeAttr(poster)}"
-                 data-rating="${score}">
+                 data-rating="${score}"
+                 data-year="${bgmYear}">
               ${thumb ? `<img src="${thumb}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">` : '<div style="width:40px;height:56px;background:var(--border);border-radius:4px;flex-shrink:0;"></div>'}
               <div class="search-result-info">
                 <div class="title">🇨🇳 ${mainTitle}${subTitle ? ' <small style="color:var(--text-secondary);">/ ' + subTitle + '</small>' : ''}</div>
@@ -1013,7 +1010,10 @@
       document.getElementById('input-title').value = item.dataset.title;
       document.getElementById('input-total').value = item.dataset.episodes !== '?' ? item.dataset.episodes : '';
       document.getElementById('input-poster').value = item.dataset.poster || '';
-      if (item.dataset.rating && !document.getElementById('input-rating').value) {
+      if (item.dataset.year) {
+        document.getElementById('input-year').value = item.dataset.year;
+      }
+      if (item.dataset.rating) {
         document.getElementById('input-rating').value = Math.round(parseFloat(item.dataset.rating));
       }
       searchResults.classList.remove('open');
