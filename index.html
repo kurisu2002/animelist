@@ -180,10 +180,10 @@
           </colgroup>
           <thead>
             <tr>
-              <th>番剧名称</th>
-              <th>进度</th>
-              <th>状态</th>
-              <th>评分</th>
+              <th class="sortable-th" onclick="toggleSort('title')">番剧名称 <span class="sort-indicator" id="sort-title"></span></th>
+              <th class="sortable-th" onclick="toggleSort('progress')">进度 <span class="sort-indicator" id="sort-progress"></span></th>
+              <th class="sortable-th" onclick="toggleSort('status')">状态 <span class="sort-indicator" id="sort-status"></span></th>
+              <th class="sortable-th" onclick="toggleSort('rating')">评分 <span class="sort-indicator" id="sort-rating"></span></th>
               <th>操作</th>
             </tr>
           </thead>

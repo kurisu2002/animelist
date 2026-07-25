@@ -471,6 +471,8 @@
     // 渲染
     // ============================================================
     let currentPage = 1;
+    let sortColumn = null;   // 当前排序列: 'title'|'progress'|'status'|'rating'|'year'
+    let sortDir = 0;         // 0=默认, 1=倒序, 2=正序
     const PAGE_SIZE = 20;
     let searchDebounceTimer = null;
 
@@ -519,6 +521,74 @@
       // 触发搜索
       const evt = new Event('input', { bubbles: true });
       animeSearch.dispatchEvent(evt);
+    }
+
+    // ===== 表头排序 =====
+    function toggleSort(column) {
+      // 点击同列：0(默认) → 1(倒序) → 2(正序) → 0(默认)
+      if (sortColumn === column) {
+        sortDir = (sortDir + 1) % 3;
+      } else {
+        sortColumn = column;
+        sortDir = 1; // 首次点击新列：倒序
+      }
+      currentPage = 1;
+      updateSortIndicators();
+      renderTable();
+    }
+
+    function updateSortIndicators() {
+      ['title','progress','status','rating','year'].forEach(col => {
+        const el = document.getElementById('sort-' + col);
+        if (!el) return;
+        if (col === sortColumn && sortDir > 0) {
+          el.textContent = sortDir === 1 ? ' ↓' : ' ↑';
+          el.style.opacity = '1';
+        } else {
+          el.textContent = '';
+          el.style.opacity = '0';
+        }
+      });
+    }
+
+    // 排序比较函数
+    function applySort(filtered) {
+      if (!sortColumn || sortDir === 0) return filtered;
+
+      const statusOrder = { '想看': 1, '在看': 2, '看完': 3, '搁置': 4, '弃番': 5 };
+      const sorted = [...filtered];
+
+      sorted.sort((a, b) => {
+        let va, vb;
+        switch (sortColumn) {
+          case 'title':
+            va = (a.title || '').toLowerCase();
+            vb = (b.title || '').toLowerCase();
+            break;
+          case 'progress':
+            va = a.total_episodes > 0 ? (a.watched_episodes || 0) / a.total_episodes : 0;
+            vb = b.total_episodes > 0 ? (b.watched_episodes || 0) / b.total_episodes : 0;
+            break;
+          case 'status':
+            va = statusOrder[a.status] || 0;
+            vb = statusOrder[b.status] || 0;
+            break;
+          case 'rating':
+            va = a.rating || 0;
+            vb = b.rating || 0;
+            break;
+          case 'year':
+            va = a.year || 0;
+            vb = b.year || 0;
+            break;
+          default:
+            return 0;
+        }
+        const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+        return sortDir === 1 ? -cmp : cmp; // 1=倒序, 2=正序
+      });
+
+      return sorted;
     }
 
     function clearSearch() {
@@ -696,6 +766,8 @@
       if (filter !== '全部') {
         filtered = filtered.filter(a => a.status === filter);
       }
+      // 应用排序（默认排序时保持原始顺序即 sort_order）
+      filtered = applySort(filtered);
       // 防止页码越界
       const maxPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
       if (currentPage > maxPage) currentPage = maxPage;
@@ -730,7 +802,8 @@
           const statusClass = statusClassMap[item.status] || 'done';
           const statusIcon = statusIcons[item.status] || '✅';
           const stars = item.rating ? '⭐'.repeat(Math.min(item.rating, 10)) : '-';
-          const yearHtml = item.year ? `<span class="title-year">${item.year}</span>` : '';
+          const yearSortIndicator = (sortColumn === 'year' && sortDir > 0) ? (sortDir === 1 ? ' ↓' : ' ↑') : '';
+const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropagation();event.preventDefault();toggleSort('year')"${yearSortIndicator ? ' style="color:var(--primary);opacity:1;"' : ''}>${item.year}${yearSortIndicator}</span>` : '';
           const titleDisplay = item.poster_url
             ? `<img src="${escapeHtml(item.poster_url)}" alt="" loading="lazy" decoding="async" class="poster-thumb" style="width:32px;height:45px;object-fit:cover;border-radius:4px;background:var(--border);" onerror="this.style.display='none'" onclick="event.stopPropagation();openLightbox('${escapeAttr(item.poster_url)}')"><div class="title-text-wrap"><span class="title-text">${escapeHtml(item.title)}</span>${yearHtml}</div>`
             : `<div class="title-text-wrap" style="grid-column:1/-1;"><span class="title-text">${escapeHtml(item.title)}</span>${yearHtml}</div>`;

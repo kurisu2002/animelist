@@ -530,6 +530,25 @@
       color: var(--text-secondary);
       opacity: .75;
       white-space: nowrap;
+      cursor: pointer;
+      transition: color .15s;
+    }
+    .title-year:hover {
+      color: var(--primary);
+      opacity: 1;
+    }
+    .sortable-th {
+      cursor: pointer;
+      user-select: none;
+      transition: color .15s;
+    }
+    .sortable-th:hover {
+      color: var(--primary);
+    }
+    .sort-indicator {
+      font-size: .75rem;
+      opacity: 0;
+      transition: opacity .15s;
     }
     /* ===== 拖动排序 ===== */
     .sortable-row {
