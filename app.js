@@ -504,12 +504,12 @@
 
       if (batchMode) {
         btn.classList.add('active');
-        btn.innerHTML = '☑ 批量';
+        btn.innerHTML = '📋 批量';
         bar.style.display = 'flex';
         batchSelected.clear();
       } else {
         btn.classList.remove('active');
-        btn.innerHTML = '☐ 批量';
+        btn.innerHTML = '📋 批量';
         bar.style.display = 'none';
         batchSelected.clear();
       }
@@ -700,14 +700,13 @@
 
           const checked = batchSelected.has(item.id) ? 'checked' : '';
           const batchCheckHtml = batchMode
-            ? `<input type="checkbox" class="batch-checkbox" ${checked} onclick="event.stopPropagation();toggleBatchCheck(${item.id})" title="勾选此项" style="margin-right:6px;">`
+            ? `<input type="checkbox" class="batch-checkbox" ${checked} onclick="event.stopPropagation();toggleBatchCheck(${item.id})" title="勾选此项">`
             : '';
 
           return `
             <tr class="sortable-row" draggable="${batchMode ? 'false' : 'true'}" data-id="${item.id}" data-sort="${item.sort_order || 0}">
               <td>
-                ${batchCheckHtml}
-                <div class="title-cell" title="${escapeHtml(item.title)}">${titleDisplay}</div>
+                <div class="title-cell${batchMode ? ' has-batch' : ''}" title="${escapeHtml(item.title)}">${batchCheckHtml}${titleDisplay}</div>
                 ${item.notes ? `<small style="color:var(--text-secondary);">${escapeHtml(item.notes)}</small>` : ''}
               </td>
               <td>

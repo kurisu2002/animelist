@@ -497,6 +497,9 @@
       gap: 8px;
       align-items: center;
     }
+    .title-cell.has-batch {
+      grid-template-columns: 20px 32px 1fr;
+    }
     .title-text {
       font-weight: 600;
       display: -webkit-box;
@@ -1127,16 +1130,9 @@
 
       /* 卡片 - 标题行 */
       td:nth-child(1) {
-        display: flex;
-        align-items: center;
-        gap: 4px;
         padding-bottom: 10px;
         margin-bottom: 8px;
         border-bottom: 1px solid var(--border);
-      }
-      /* 标题格内勾选框对齐 */
-      td:nth-child(1) .batch-checkbox {
-        margin-top: -2px;
       }
       .title-cell { max-width: none; }
 
