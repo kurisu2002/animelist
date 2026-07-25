@@ -782,10 +782,10 @@
     .user-badge .user-name {
       font-weight: 600;
       color: var(--text);
+      line-height: 32px; /* 与头像等高，单行居中 */
     }
     .user-badge .user-email-sub {
-      font-size: .75rem;
-      color: var(--text-secondary);
+      display: none; /* 邮箱不在外部显示，仅在个人资料弹窗查看 */
     }
     .logout-icon {
       font-size: .85rem;
@@ -1000,8 +1000,8 @@
       .header-right { gap: 8px; }
       .user-badge { padding: 4px 10px 4px 4px; font-size: .78rem; gap: 6px; }
       .user-badge .user-icon { width: 28px; height: 28px; font-size: .7rem; }
-      .user-badge .user-name { font-size: .8rem; }
-      .user-badge .user-email-sub { font-size: .7rem; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+      .user-badge .user-name { font-size: .8rem; line-height: 28px; }
+      .user-badge .user-email-sub { display: none; }
       .logout-icon { font-size: .75rem; padding: 2px 4px; margin-left: 2px; }
       #add-btn { padding: 8px 12px; font-size: .82rem; }
 

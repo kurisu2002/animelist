@@ -116,13 +116,13 @@
           } else {
             iconEl.textContent = username.charAt(0).toUpperCase();
           }
-          // Header 用户名
+          // Header 用户名（不显示邮箱）
           document.getElementById('user-display').textContent = username;
-          document.getElementById('user-email-sub').textContent = email;
+          document.getElementById('user-email-sub').style.display = 'none';
           badge.style.display = '';
           logoutBtn.style.display = '';
-          // 统计区
-          document.getElementById('user-info-email').textContent = username + ' (' + email + ')';
+          // 统计区（仅显示用户名）
+          document.getElementById('user-info-email').textContent = username;
           infoLine.style.display = '';
         } else {
           badge.style.display = 'none';
@@ -141,7 +141,9 @@
       document.getElementById('profile-avatar-file').value = '';
       supabaseClient.auth.getSession().then(({ data }) => {
         const meta = data?.session?.user?.user_metadata || {};
+        const email = data?.session?.user?.email || '';
         document.getElementById('profile-username').value = meta.username || '';
+        document.getElementById('profile-email').value = email;
         loadAvatarPreview(meta.avatar_url || '');
       });
       document.getElementById('profile-modal').style.display = 'flex';
