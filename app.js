@@ -475,11 +475,78 @@
     function debouncedSearch() {
       clearTimeout(searchDebounceTimer);
       const input = document.getElementById('search-input');
+      const clearBtn = document.getElementById('search-clear');
+      // 有内容时显示清除按钮
+      clearBtn.style.display = input.value.trim() ? 'flex' : 'none';
       searchDebounceTimer = setTimeout(() => {
         // 清空搜索词时重置页码（改写前的值）
-        if (!input.value.trim()) currentPage = 1;
+        if (!input.value.trim()) { currentPage = 1; clearBtn.style.display = 'none'; }
         renderTable();
       }, 200);
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('search-input');
+      input.value = '';
+      document.getElementById('search-clear').style.display = 'none';
+      currentPage = 1;
+      renderTable();
+    }
+
+    // ===== 批量操作 =====
+    let batchMode = false;
+    const batchSelected = new Set();  // 存储已选中的 anime id
+
+    function toggleBatchMode() {
+      batchMode = !batchMode;
+      const btn = document.getElementById('batch-btn');
+      const bar = document.getElementById('batch-bar');
+
+      if (batchMode) {
+        btn.classList.add('active');
+        btn.innerHTML = '☑ 批量';
+        bar.style.display = 'flex';
+        batchSelected.clear();
+      } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '☐ 批量';
+        bar.style.display = 'none';
+        batchSelected.clear();
+      }
+      updateBatchCount();
+      renderTable();
+    }
+
+    function toggleBatchCheck(itemId) {
+      if (batchSelected.has(itemId)) {
+        batchSelected.delete(itemId);
+      } else {
+        batchSelected.add(itemId);
+      }
+      updateBatchCount();
+    }
+
+    function updateBatchCount() {
+      document.getElementById('batch-count').textContent = '已选 ' + batchSelected.size + ' 项';
+    }
+
+    async function batchSetStatus(status) {
+      if (batchSelected.size === 0) {
+        showToast('⚠️ 请先勾选番剧', 'error');
+        return;
+      }
+      if (!confirm('确定将已选的 ' + batchSelected.size + ' 部番剧状态改为「' + status + '」？')) return;
+
+      const ids = Array.from(batchSelected);
+      let success = 0;
+      for (const id of ids) {
+        const { err } = await supabaseClient.from('animes').update({ status: status }).eq('id', id);
+        if (!err) success++;
+      }
+      showToast('✅ 已更新 ' + success + '/' + ids.length + ' 部', 'success');
+      batchSelected.clear();
+      toggleBatchMode();  // 退出批量模式
+      loadAnimes();
     }
 
     // ===== 自定义下拉选择器 =====
@@ -631,9 +698,15 @@
             ? `<img src="${escapeHtml(item.poster_url)}" alt="" loading="lazy" decoding="async" class="poster-thumb" style="width:32px;height:45px;object-fit:cover;border-radius:4px;background:var(--border);" onerror="this.style.display='none'" onclick="event.stopPropagation();openLightbox('${escapeAttr(item.poster_url)}')"><span class="title-text">${escapeHtml(item.title)}</span>`
             : `<span class="title-text" style="grid-column:1/-1;">${escapeHtml(item.title)}</span>`;
 
+          const checked = batchSelected.has(item.id) ? 'checked' : '';
+          const batchCheckHtml = batchMode
+            ? `<input type="checkbox" class="batch-checkbox" ${checked} onclick="event.stopPropagation();toggleBatchCheck(${item.id})" title="勾选此项" style="margin-right:6px;">`
+            : '';
+
           return `
-            <tr class="sortable-row" draggable="true" data-id="${item.id}" data-sort="${item.sort_order || 0}">
+            <tr class="sortable-row" draggable="${batchMode ? 'false' : 'true'}" data-id="${item.id}" data-sort="${item.sort_order || 0}">
               <td>
+                ${batchCheckHtml}
                 <div class="title-cell" title="${escapeHtml(item.title)}">${titleDisplay}</div>
                 ${item.notes ? `<small style="color:var(--text-secondary);">${escapeHtml(item.notes)}</small>` : ''}
               </td>

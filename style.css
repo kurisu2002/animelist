@@ -233,6 +233,77 @@
       opacity: 1;
       z-index: 1;
     }
+    .search-clear {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.3);
+      border: none;
+      color: var(--text-secondary);
+      font-size: .85rem;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      transition: background .15s, color .15s;
+    }
+    .search-clear:hover {
+      background: rgba(239,68,68,0.6);
+      color: #fff;
+    }
+
+    /* ===== 批量操作 ===== */
+    .batch-toggle {
+      background: rgba(255,255,255,0.22) !important;
+      backdrop-filter: blur(4px);
+      flex-shrink: 0;
+    }
+    .batch-toggle.active {
+      background: rgba(99,102,241,0.25) !important;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(99,102,241,.3);
+    }
+    .batch-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      background: rgba(255,255,255,0.22);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: .85rem;
+    }
+    .batch-bar .batch-status-btn {
+      font-size: .8rem;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.22);
+    }
+    #batch-count {
+      font-weight: 600;
+      color: var(--primary);
+      min-width: 60px;
+    }
+    .batch-checkbox {
+      width: 18px; height: 18px;
+      cursor: pointer;
+      accent-color: var(--primary);
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .search-clear { background: rgba(255,255,255,0.12); }
+      .batch-bar { background: rgba(30,41,59,0.35); }
+      .batch-toggle { background: rgba(30,41,59,0.25) !important; }
+      .batch-toggle.active { background: rgba(99,102,241,0.2) !important; }
+    }
     /* ===== 自定义下拉选择器 ===== */
     .custom-select {
       position: relative;
@@ -958,6 +1029,8 @@
       .logo { background: rgba(30,41,59,0.22); }
       .user-badge { background: rgba(30,41,59,0.22); }
       .btn-outline { background: rgba(30,41,59,0.22); }
+      .batch-toggle { background: rgba(30,41,59,0.25) !important; }
+      .batch-bar { background: rgba(30,41,59,0.35); }
       .btn-primary { background: rgba(99,102,241,0.18); }
       .custom-select-trigger { background: rgba(30,41,59,0.22); }
       .custom-select-dropdown { background: rgba(30,41,59,0.55); }
@@ -994,6 +1067,9 @@
       .stat-card .number { font-size: 1.4rem; }
       .main { padding: 16px; }
       .toolbar { gap: 8px; }
+      .batch-toggle { font-size: .78rem !important; padding: 6px 10px !important; }
+      .batch-bar { gap: 4px; padding: 8px 10px; font-size: .78rem; flex-wrap: wrap; }
+      .batch-bar .batch-status-btn { font-size: .75rem; padding: 3px 8px; }
       .form-grid { grid-template-columns: 1fr 1fr; }
       .btn { padding: 8px 14px; font-size: .85rem; }
       .poster-thumb { width: 26px !important; height: 37px !important; }
@@ -1051,9 +1127,16 @@
 
       /* 卡片 - 标题行 */
       td:nth-child(1) {
+        display: flex;
+        align-items: center;
+        gap: 4px;
         padding-bottom: 10px;
         margin-bottom: 8px;
         border-bottom: 1px solid var(--border);
+      }
+      /* 标题格内勾选框对齐 */
+      td:nth-child(1) .batch-checkbox {
+        margin-top: -2px;
       }
       .title-cell { max-width: none; }
 
