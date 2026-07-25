@@ -233,7 +233,10 @@
       opacity: 1;
       z-index: 1;
     }
-    .search-clear {
+    .input-clear-wrap {
+      position: relative;
+    }
+    .input-clear-btn, .search-clear {
       position: absolute;
       right: 8px;
       top: 50%;
@@ -250,10 +253,14 @@
       justify-content: center;
       line-height: 1;
       transition: background .15s, color .15s;
+      z-index: 2;
     }
-    .search-clear:hover {
+    .input-clear-btn:hover, .search-clear:hover {
       background: rgba(239,68,68,0.6);
       color: #fff;
+    }
+    .input-clear-wrap input {
+      padding-right: 32px;
     }
 
     /* ===== 批量操作 ===== */
@@ -299,7 +306,7 @@
     }
 
     @media (prefers-color-scheme: dark) {
-      .search-clear { background: rgba(255,255,255,0.12); }
+      .input-clear-btn, .search-clear { background: rgba(255,255,255,0.12); }
       .batch-bar { background: rgba(30,41,59,0.35); }
       .batch-toggle { background: rgba(30,41,59,0.25) !important; }
       .batch-toggle.active { background: rgba(99,102,241,0.2) !important; }

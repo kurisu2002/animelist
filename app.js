@@ -487,6 +487,40 @@
       }, 200);
     }
 
+    function toggleInputClear(inputId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const wrap = input.closest('.input-clear-wrap');
+      const btn = wrap ? wrap.querySelector('.input-clear-btn') : null;
+      if (btn) btn.style.display = input.value ? 'flex' : 'none';
+    }
+
+    function clearInput(inputId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      input.value = '';
+      input.focus();
+      toggleInputClear(inputId);
+      // 如果清空的是主搜索栏，重新渲染表格
+      if (inputId === 'search-input') { currentPage = 1; renderTable(); }
+      // 如果清空的是添加面板的搜索，关闭搜索结果
+      if (inputId === 'anime-search') {
+        document.getElementById('search-results').classList.remove('open');
+      }
+    }
+
+    function fillTitleToSearch() {
+      const title = document.getElementById('input-title').value.trim();
+      if (!title) { showToast('⚠️ 请先填写番剧名称', 'error'); return; }
+      const animeSearch = document.getElementById('anime-search');
+      animeSearch.value = title;
+      toggleInputClear('anime-search');
+      animeSearch.focus();
+      // 触发搜索
+      const evt = new Event('input', { bubbles: true });
+      animeSearch.dispatchEvent(evt);
+    }
+
     function clearSearch() {
       const input = document.getElementById('search-input');
       input.value = '';

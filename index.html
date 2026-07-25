@@ -91,8 +91,9 @@
       <h3>📝 添加新番</h3>
 
       <!-- 动画数据库搜索 -->
-      <div class="anime-search-wrap">
-        <input type="text" id="anime-search" placeholder="🔍 搜索动画（支持中文/日文/英文/罗马音）...">
+      <div class="anime-search-wrap input-clear-wrap">
+        <input type="text" id="anime-search" placeholder="🔍 搜索动画（支持中文/日文/英文/罗马音）..." oninput="toggleInputClear('anime-search')">
+        <button class="input-clear-btn" onclick="clearInput('anime-search')" title="清空" style="display:none;">✕</button>
         <div class="search-results" id="search-results"></div>
       </div>
       <div style="text-align:center;margin:8px 0;font-size:.8rem;color:var(--text-secondary);">
@@ -100,7 +101,13 @@
       </div>
 
       <div class="form-grid">
-        <input type="text" id="input-title" placeholder="番剧名称 *" style="grid-column: 1 / -1;">
+        <div style="grid-column:1/-1;display:flex;gap:6px;">
+          <div class="input-clear-wrap" style="flex:1;">
+            <input type="text" id="input-title" placeholder="番剧名称" style="width:100%;" oninput="toggleInputClear('input-title')">
+            <button class="input-clear-btn" onclick="clearInput('input-title')" title="清空" style="display:none;">✕</button>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="fillTitleToSearch()" title="填入搜索栏查资料" style="flex-shrink:0;padding:6px 10px;">🔍</button>
+        </div>
         <input type="number" id="input-year" placeholder="年份 (如 2024)" min="1900" max="2099" style="width:100%;">
         <input type="number" id="input-total" placeholder="总集数" min="1">
         <input type="number" id="input-watched" placeholder="已看集数" min="0" value="0">
@@ -112,8 +119,14 @@
           <option value="弃番">🚫 弃番</option>
         </select>
         <input type="number" id="input-rating" placeholder="评分 (1-10)" min="1" max="10">
-        <input type="url" id="input-poster" placeholder="封面图片链接 (可选)">
-        <input type="text" id="input-notes" placeholder="备注 (可选)">
+        <div class="input-clear-wrap" style="grid-column:1/-1;">
+          <input type="url" id="input-poster" placeholder="封面图片链接 (可选)" style="width:100%;" oninput="toggleInputClear('input-poster')">
+          <button class="input-clear-btn" onclick="clearInput('input-poster')" title="清空" style="display:none;">✕</button>
+        </div>
+        <div class="input-clear-wrap" style="grid-column:1/-1;">
+          <input type="text" id="input-notes" placeholder="备注 (可选)" style="width:100%;" oninput="toggleInputClear('input-notes')">
+          <button class="input-clear-btn" onclick="clearInput('input-notes')" title="清空" style="display:none;">✕</button>
+        </div>
       </div>
       <div class="form-actions">
         <button class="btn btn-primary" onclick="addAnime()">✅ 确认添加</button>
@@ -140,7 +153,6 @@
           <div class="custom-select-option" data-value="弃番" onclick="selectCustomOption('弃番', '🚫 弃番')">🚫 弃番</div>
         </div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="loadAnimes()" title="刷新数据">🔄 刷新</button>
     </div>
 
     <!-- 批量操作栏 -->
