@@ -500,6 +500,12 @@
     .title-cell.has-batch {
       grid-template-columns: 20px 32px 1fr;
     }
+    .title-text-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
     .title-text {
       font-weight: 600;
       display: -webkit-box;
@@ -510,6 +516,13 @@
       line-height: 1.4;
       flex: 1;
       min-width: 0;
+    }
+    .title-year {
+      font-size: .75rem;
+      font-weight: 400;
+      color: var(--text-secondary);
+      opacity: .75;
+      white-space: nowrap;
     }
     /* ===== 拖动排序 ===== */
     .sortable-row {

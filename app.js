@@ -385,6 +385,7 @@
         watched = w ? parseInt(w) : 0;
       }
 
+      const year = document.getElementById('input-year').value;
       const rating = document.getElementById('input-rating').value;
       const poster = document.getElementById('input-poster').value.trim();
       const notes = document.getElementById('input-notes').value.trim();
@@ -399,6 +400,7 @@
       };
       if (poster) saveData.poster_url = poster;
       if (notes) saveData.notes = notes;
+      saveData.year = year ? parseInt(year) : null;
 
       let error;
       if (editingId) {
@@ -694,9 +696,10 @@
           const statusClass = statusClassMap[item.status] || 'done';
           const statusIcon = statusIcons[item.status] || '✅';
           const stars = item.rating ? '⭐'.repeat(Math.min(item.rating, 10)) : '-';
+          const yearHtml = item.year ? `<span class="title-year">📅 ${item.year}</span>` : '';
           const titleDisplay = item.poster_url
-            ? `<img src="${escapeHtml(item.poster_url)}" alt="" loading="lazy" decoding="async" class="poster-thumb" style="width:32px;height:45px;object-fit:cover;border-radius:4px;background:var(--border);" onerror="this.style.display='none'" onclick="event.stopPropagation();openLightbox('${escapeAttr(item.poster_url)}')"><span class="title-text">${escapeHtml(item.title)}</span>`
-            : `<span class="title-text" style="grid-column:1/-1;">${escapeHtml(item.title)}</span>`;
+            ? `<img src="${escapeHtml(item.poster_url)}" alt="" loading="lazy" decoding="async" class="poster-thumb" style="width:32px;height:45px;object-fit:cover;border-radius:4px;background:var(--border);" onerror="this.style.display='none'" onclick="event.stopPropagation();openLightbox('${escapeAttr(item.poster_url)}')"><div class="title-text-wrap"><span class="title-text">${escapeHtml(item.title)}</span>${yearHtml}</div>`
+            : `<div class="title-text-wrap" style="grid-column:1/-1;"><span class="title-text">${escapeHtml(item.title)}</span>${yearHtml}</div>`;
 
           const checked = batchSelected.has(item.id) ? 'checked' : '';
           const batchCheckHtml = batchMode
@@ -780,7 +783,7 @@
     }
 
     function clearFormFields() {
-      ['input-title','input-total','input-watched','input-rating','input-poster','input-notes'].forEach(id => {
+      ['input-title','input-year','input-total','input-watched','input-rating','input-poster','input-notes'].forEach(id => {
         document.getElementById(id).value = '';
       });
       document.getElementById('input-status').value = '在看';
@@ -798,6 +801,7 @@
       const anime = allAnimes.find(a => a.id === id);
       if (!anime) return;
       document.getElementById('input-title').value = anime.title || '';
+      document.getElementById('input-year').value = anime.year || '';
       document.getElementById('input-total').value = anime.total_episodes || '';
       document.getElementById('input-watched').value = anime.watched_episodes || 0;
       document.getElementById('input-status').value = anime.status || '在看';
@@ -987,7 +991,8 @@
                  data-title="${escapeAttr(mainTitle)}"
                  data-episodes="${eps}"
                  data-poster="${escapeAttr(poster)}"
-                 data-rating="${score}">
+                 data-rating="${score}"
+                 data-year="${item.seasonYear || ''}">
               ${poster ? `<img src="${poster}" alt="" loading="lazy" decoding="async" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 56%22><rect fill=%22%23ddd%22 width=%2240%22 height=%2256%22/></svg>'">` : '<div style="width:40px;height:56px;background:var(--border);border-radius:4px;"></div>'}
               <div class="search-result-info">
                 <div class="title">${mainTitle}${subTitle ? ' <small style="color:var(--text-secondary);">/ ' + subTitle + '</small>' : ''}</div>
@@ -1023,6 +1028,9 @@
       document.getElementById('input-title').value = item.dataset.title;
       document.getElementById('input-total').value = item.dataset.episodes !== '?' ? item.dataset.episodes : '';
       document.getElementById('input-poster').value = item.dataset.poster || '';
+      if (item.dataset.year && !document.getElementById('input-year').value) {
+        document.getElementById('input-year').value = item.dataset.year;
+      }
       if (item.dataset.rating && !document.getElementById('input-rating').value) {
         document.getElementById('input-rating').value = Math.round(parseFloat(item.dataset.rating));
       }

@@ -101,6 +101,7 @@
 
       <div class="form-grid">
         <input type="text" id="input-title" placeholder="番剧名称 *" style="grid-column: 1 / -1;">
+        <input type="number" id="input-year" placeholder="年份 (如 2024)" min="1900" max="2099" style="width:100%;">
         <input type="number" id="input-total" placeholder="总集数" min="1">
         <input type="number" id="input-watched" placeholder="已看集数" min="0" value="0">
         <select id="input-status" onchange="autoSetWatched()">
