@@ -1254,10 +1254,6 @@
         await supabaseClient.from('animes').update({ sort_order: newOrder }).eq('id', fromId);
       }
 
-      // 在搜索或筛选模式下提醒用户
-      if (search || filter !== '全部') {
-        showToast('💡 排序已在当前「' + (search ? '搜索' : '') + (search && filter !== '全部' ? ' + ' : '') + (filter !== '全部' ? filter : '') + '」视图中更新，全局排序可能不同', 'success');
-      }
     }
 
     // ============================================================
