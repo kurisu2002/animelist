@@ -696,7 +696,7 @@
           const statusClass = statusClassMap[item.status] || 'done';
           const statusIcon = statusIcons[item.status] || '✅';
           const stars = item.rating ? '⭐'.repeat(Math.min(item.rating, 10)) : '-';
-          const yearHtml = item.year ? `<span class="title-year">📅 ${item.year}</span>` : '';
+          const yearHtml = item.year ? `<span class="title-year">${item.year}</span>` : '';
           const titleDisplay = item.poster_url
             ? `<img src="${escapeHtml(item.poster_url)}" alt="" loading="lazy" decoding="async" class="poster-thumb" style="width:32px;height:45px;object-fit:cover;border-radius:4px;background:var(--border);" onerror="this.style.display='none'" onclick="event.stopPropagation();openLightbox('${escapeAttr(item.poster_url)}')"><div class="title-text-wrap"><span class="title-text">${escapeHtml(item.title)}</span>${yearHtml}</div>`
             : `<div class="title-text-wrap" style="grid-column:1/-1;"><span class="title-text">${escapeHtml(item.title)}</span>${yearHtml}</div>`;
@@ -786,7 +786,7 @@
       ['input-title','input-year','input-total','input-watched','input-rating','input-poster','input-notes'].forEach(id => {
         document.getElementById(id).value = '';
       });
-      document.getElementById('input-status').value = '在看';
+      document.getElementById('input-status').value = '想看';
       document.getElementById('input-watched').value = '0';
     }
 
@@ -1031,10 +1031,10 @@
       if (item.dataset.year) {
         document.getElementById('input-year').value = item.dataset.year;
       }
-      if (item.dataset.rating && !document.getElementById('input-rating').value) {
+      if (item.dataset.rating) {
         document.getElementById('input-rating').value = Math.round(parseFloat(item.dataset.rating));
       }
-      if (item.dataset.synopsis && !document.getElementById('input-notes').value) {
+      if (item.dataset.synopsis) {
         document.getElementById('input-notes').value = item.dataset.synopsis.substring(0, 200);
       }
 
