@@ -1028,7 +1028,7 @@
       document.getElementById('input-title').value = item.dataset.title;
       document.getElementById('input-total').value = item.dataset.episodes !== '?' ? item.dataset.episodes : '';
       document.getElementById('input-poster').value = item.dataset.poster || '';
-      if (item.dataset.year && !document.getElementById('input-year').value) {
+      if (item.dataset.year) {
         document.getElementById('input-year').value = item.dataset.year;
       }
       if (item.dataset.rating && !document.getElementById('input-rating').value) {
