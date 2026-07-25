@@ -46,8 +46,10 @@
   <div class="daily-quote" id="daily-quote">
     <div class="daily-date" id="daily-date"></div>
     <div class="daily-text" id="daily-text">加载中...</div>
-    <div class="daily-from" id="daily-from"></div>
-    <button class="daily-refresh" onclick="refreshQuote()" title="换一句">🔄</button>
+    <div class="daily-source-row">
+      <div class="daily-from" id="daily-from"></div>
+      <button class="daily-refresh" onclick="refreshQuote()" title="换一句">🔄</button>
+    </div>
   </div>
 
   <!-- 统计卡片 -->
@@ -141,10 +143,10 @@
         <table>
           <colgroup>
             <col style="width:38%">
-            <col style="width:24%">
-            <col style="width:13%">
-            <col class="col-rating" style="width:10%">
-            <col style="width:15%">
+            <col style="width:18%">
+            <col style="width:12%">
+            <col class="col-rating" style="width:18%">
+            <col style="width:14%">
           </colgroup>
           <thead>
             <tr>

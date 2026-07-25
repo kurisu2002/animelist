@@ -367,6 +367,7 @@
       const title = document.getElementById('input-title').value.trim();
       if (!title) { showToast('请输入番剧名称', 'error'); return; }
 
+
       const total = document.getElementById('input-total').value;
       const totalNum = total ? parseInt(total) : 0;
       const status = document.getElementById('input-status').value;
@@ -691,21 +692,29 @@
       if (panel.classList.contains('open')) {
         btn.textContent = '✖ 关闭';
         document.getElementById('input-title').focus();
-        // 如果是通过添加按钮打开的（不是编辑），重置编辑状态
-        if (!editingId && submitBtn) submitBtn.textContent = '✅ 确认添加';
+        // 非编辑模式打开 → 清空表单，防止旧数据残留导致新增变重复
+        if (!editingId) {
+          clearFormFields();
+          if (submitBtn) submitBtn.textContent = '✅ 确认添加';
+        }
       } else {
         btn.textContent = '➕ 添加新番';
         editingId = null;
+        clearFormFields();
         if (submitBtn) submitBtn.textContent = '✅ 确认添加';
       }
     }
 
-    function clearForm() {
+    function clearFormFields() {
       ['input-title','input-total','input-watched','input-rating','input-poster','input-notes'].forEach(id => {
         document.getElementById(id).value = '';
       });
       document.getElementById('input-status').value = '在看';
       document.getElementById('input-watched').value = '0';
+    }
+
+    function clearForm() {
+      clearFormFields();
       editingId = null;
       const submitBtn = document.querySelector('#add-panel .btn-primary');
       if (submitBtn) submitBtn.textContent = '✅ 确认添加';
@@ -1193,60 +1202,45 @@
     // ============================================================
     // 每日一言
     // ============================================================
-    let quoteCache = null;
+    let quoteAborter = null;  // 取消进行中的请求，防止快速连点冲突
 
-    function fetchQuote(forceNew) {
-      const now = new Date();
-      const todayKey = 'anime-quote-' + now.toISOString().slice(0, 10);
+    async function fetchQuote(signal) {
+      if (signal && signal.aborted) return;
 
-      // 非强制刷新时，优先用内存缓存
-      if (!forceNew && quoteCache && quoteCache.key === todayKey) {
-        document.getElementById('daily-text').textContent = quoteCache.hitokoto;
-        document.getElementById('daily-from').textContent = quoteCache.from;
-        return;
-      }
-
-      // 非强制刷新时，尝试 localStorage 缓存
-      if (!forceNew) {
-        const cached = localStorage.getItem(todayKey);
-        if (cached) {
+      try {
+        const res = await fetch('/api/random-quote?_t=' + Date.now(), {
+          cache: 'no-store',
+          signal: signal || null
+        });
+        const data = await res.json();
+        if (signal && signal.aborted) return;
+        if (data && data.hitokoto) {
+          document.getElementById('daily-text').textContent = data.hitokoto;
+          document.getElementById('daily-from').textContent = data.from || '';
+          // 缓存最新一条作为离线回退
+          localStorage.setItem('anime-quote-fallback', JSON.stringify({ hitokoto: data.hitokoto, from: data.from || '' }));
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+        // 网络失败时用上次缓存兜底
+        const fb = localStorage.getItem('anime-quote-fallback');
+        if (fb) {
           try {
-            const q = JSON.parse(cached);
-            quoteCache = { key: todayKey, ...q };
+            const q = JSON.parse(fb);
             document.getElementById('daily-text').textContent = q.hitokoto;
             document.getElementById('daily-from').textContent = q.from;
-            return;
-          } catch (e) { /* 缓存损坏 */ }
+          } catch (_) { /* ignore */ }
         }
       }
-
-      // 请求新台词
-      fetch('https://hi.logacg.com/?c=b')
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.hitokoto) {
-            document.getElementById('daily-text').textContent = data.hitokoto;
-            document.getElementById('daily-from').textContent = data.from || '';
-            quoteCache = { key: todayKey, hitokoto: data.hitokoto, from: data.from || '' };
-            localStorage.setItem(todayKey, JSON.stringify({ hitokoto: data.hitokoto, from: data.from || '' }));
-            // 清理旧缓存
-            Object.keys(localStorage).forEach(k => { if (k.startsWith('anime-quote-') && k !== todayKey) localStorage.removeItem(k); });
-          }
-        })
-        .catch(() => {
-          document.getElementById('daily-text').textContent = '人は誰でも、自分が思っているより強くなれる。';
-          document.getElementById('daily-from').textContent = '火影忍者';
-        });
     }
 
     function refreshQuote() {
-      // 清除今日缓存，强制拉新台词
-      const todayKey = 'anime-quote-' + new Date().toISOString().slice(0, 10);
-      localStorage.removeItem(todayKey);
-      quoteCache = null;
+      if (quoteAborter) { quoteAborter.abort(); }
+      quoteAborter = new AbortController();
+
       document.getElementById('daily-text').textContent = '加载中...';
       document.getElementById('daily-from').textContent = '';
-      fetchQuote(true);
+      fetchQuote(quoteAborter.signal);
     }
 
     // 初始化
@@ -1255,5 +1249,5 @@
       const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
       const dateStr = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日 · ' + weekDays[now.getDay()];
       document.getElementById('daily-date').textContent = '📅 ' + dateStr;
-      fetchQuote(false);
+      refreshQuote();
     })();
