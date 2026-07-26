@@ -862,7 +862,8 @@
             panel.set(i + 1, total, '❓ ' + a.title + ' 未找到', updated);
           }
         } catch (e) {
-          panel.set(i + 1, total, '⚠️ ' + a.title + ' 出错跳过', updated);
+          console.error('更新出错: ' + a.title, e);
+          panel.set(i + 1, total, '⚠️ ' + a.title + ': ' + (e.message || e), updated);
         }
         await new Promise(r => setTimeout(r, 400));
       }
