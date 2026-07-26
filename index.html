@@ -81,6 +81,10 @@
       <div class="number" id="stat-dropped">0</div>
       <div class="label">🚫 弃番</div>
     </div>
+    <div class="stat-card" onclick="filterFavorites()" title="点击查看收藏">
+      <div class="number" id="stat-favorites">0</div>
+      <div class="label">⭐ 收藏</div>
+    </div>
   </div>
 
   <!-- 主内容 -->
@@ -116,9 +120,8 @@
           <option value="在看">📺 在看</option>
           <option value="看完">✅ 看完</option>
           <option value="搁置">⏸️ 搁置</option>
-          <option value="弃番">🚫 弃番</option>
         </select>
-        <input type="number" id="input-rating" placeholder="评分 (1-10)" min="1" max="10">
+        <input type="number" id="input-rating" placeholder="评分 (0-10)" min="0" max="10" step="0.1">
         <div class="input-clear-wrap" style="grid-column:1/-1;">
           <input type="url" id="input-poster" placeholder="封面图片链接 (可选)" style="width:100%;" oninput="toggleInputClear('input-poster')">
           <button class="input-clear-btn" onclick="clearInput('input-poster')" title="清空" style="display:none;">✕</button>
@@ -150,7 +153,6 @@
           <div class="custom-select-option" data-value="在看" onclick="selectCustomOption('在看', '📺 在看')">📺 在看</div>
           <div class="custom-select-option" data-value="看完" onclick="selectCustomOption('看完', '✅ 看完')">✅ 看完</div>
           <div class="custom-select-option" data-value="搁置" onclick="selectCustomOption('搁置', '⏸️ 搁置')">⏸️ 搁置</div>
-          <div class="custom-select-option" data-value="弃番" onclick="selectCustomOption('弃番', '🚫 弃番')">🚫 弃番</div>
         </div>
       </div>
     </div>
@@ -163,8 +165,16 @@
       <button class="btn btn-outline btn-sm batch-status-btn" onclick="batchSetStatus('在看')">📺 在看</button>
       <button class="btn btn-outline btn-sm batch-status-btn" onclick="batchSetStatus('看完')">✅ 看完</button>
       <button class="btn btn-outline btn-sm batch-status-btn" onclick="batchSetStatus('搁置')">⏸️ 搁置</button>
-      <button class="btn btn-outline btn-sm batch-status-btn" onclick="batchSetStatus('弃番')">🚫 弃番</button>
       <button class="btn btn-outline btn-sm" onclick="toggleBatchMode()" style="margin-left:auto;">取消</button>
+    </div>
+
+    <!-- 手机端排序栏 -->
+    <div class="mobile-sort-bar">
+      <span class="mobile-sort-item" onclick="toggleSort('title')" id="mobile-sort-title">📛 名称</span>
+      <span class="mobile-sort-item" onclick="toggleSort('progress')" id="mobile-sort-progress">📊 进度</span>
+      <span class="mobile-sort-item" onclick="toggleSort('status')" id="mobile-sort-status">📌 状态</span>
+      <span class="mobile-sort-item" onclick="toggleSort('rating')" id="mobile-sort-rating">⭐ 评分</span>
+      <span class="mobile-sort-item" onclick="toggleSort('year')" id="mobile-sort-year">📅 年份</span>
     </div>
 
     <!-- 表格 -->

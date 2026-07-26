@@ -395,7 +395,7 @@
         total_episodes: totalNum || null,
         watched_episodes: watched,
         status,
-        rating: rating ? parseInt(rating) : null,
+        rating: rating ? parseFloat(rating) : null,
         updated_at: new Date().toISOString(),
       };
       if (poster) saveData.poster_url = poster;
@@ -473,6 +473,7 @@
     let currentPage = 1;
     let sortColumn = null;   // 当前排序列: 'title'|'progress'|'status'|'rating'|'year'
     let sortDir = 0;         // 0=默认, 1=倒序, 2=正序
+    let favFilter = false;   // 是否仅显示收藏
     const PAGE_SIZE = 20;
     let searchDebounceTimer = null;
 
@@ -538,15 +539,20 @@
     }
 
     function updateSortIndicators() {
+      const arrows = { 0: '', 1: ' ↓', 2: ' ↑' };
+      // 桌面端表头
       ['title','progress','status','rating','year'].forEach(col => {
         const el = document.getElementById('sort-' + col);
         if (!el) return;
-        if (col === sortColumn && sortDir > 0) {
-          el.textContent = sortDir === 1 ? ' ↓' : ' ↑';
-          el.style.opacity = '1';
-        } else {
-          el.textContent = '';
-          el.style.opacity = '0';
+        const active = col === sortColumn && sortDir > 0;
+        el.textContent = active ? arrows[sortDir] : '';
+        el.style.opacity = active ? '1' : '0';
+        // 手机端排序栏
+        const mobileEl = document.getElementById('mobile-sort-' + col);
+        if (mobileEl) {
+          mobileEl.style.color = active ? 'var(--primary)' : '';
+          mobileEl.style.fontWeight = active ? '700' : '';
+          mobileEl.textContent = mobileEl.textContent.replace(/ [↓↑]$/, '') + (active ? arrows[sortDir] : '');
         }
       });
     }
@@ -589,6 +595,54 @@
       });
 
       return sorted;
+    }
+
+    // ===== 状态点击循环切换 =====
+    const statusCycle = ['想看', '在看', '看完', '搁置', '弃番'];
+    async function cycleStatus(id) {
+      const anime = allAnimes.find(a => a.id === id);
+      if (!anime) return;
+      const curIdx = statusCycle.indexOf(anime.status);
+      const nextStatus = statusCycle[(curIdx + 1) % statusCycle.length];
+      if (!supabaseClient) { showToast('⚠️ 未连接数据库', 'error'); return; }
+      const { error } = await supabaseClient.from('animes').update({ status: nextStatus }).eq('id', id);
+      if (error) { showToast('❌ 更新失败', 'error'); return; }
+      anime.status = nextStatus;
+      renderTable();
+    }
+
+    // ===== 收藏切换 =====
+    async function toggleFavorite(id) {
+      const anime = allAnimes.find(a => a.id === id);
+      if (!anime) return;
+      const newFav = !anime.is_favorite;
+      if (!supabaseClient) { showToast('⚠️ 未连接数据库', 'error'); return; }
+      const { error } = await supabaseClient.from('animes').update({ is_favorite: newFav }).eq('id', id);
+      if (error) { showToast('❌ 更新失败', 'error'); return; }
+      anime.is_favorite = newFav;
+      renderTable();
+      showToast(newFav ? '⭐ 已收藏' : '已取消收藏', 'success');
+    }
+
+    // ===== 收藏筛选 =====
+    function filterFavorites() {
+      favFilter = !favFilter;
+      document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+      const cards = document.querySelectorAll('.stat-card');
+      if (favFilter && cards[6]) {
+        cards[6].classList.add('active');
+      } else {
+        favFilter = false;
+        // 回到全部
+        if (cards[0]) cards[0].classList.add('active');
+        document.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+        const allOpt = document.querySelector('.custom-select-option[data-value="全部"]');
+        if (allOpt) allOpt.classList.add('selected');
+        document.querySelector('.custom-select-trigger').textContent = '📋 全部状态';
+      }
+      currentPage = 1;
+      renderTable();
+      if (favFilter) showToast('⭐ 已筛选收藏（再点一次取消）', 'success');
     }
 
     function clearSearch() {
@@ -680,6 +734,7 @@
     });
 
     function filterByStatus(status) {
+      favFilter = false; // 切换状态筛选时取消收藏筛选
       // 更新 URL hash（可分享链接）
       if (status === '全部') {
         history.replaceState(null, '', location.pathname + location.search);
@@ -696,7 +751,7 @@
 
       // 更新卡片高亮
       document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
-      const statIndex = { '全部': 0, '在看': 1, '想看': 2, '看完': 3, '搁置': 4, '弃番': 5 };
+      const statIndex = { '全部': 0, '在看': 1, '想看': 2, '看完': 3, '搁置': 4, '弃番': 5, '收藏': 6 };
       const cards = document.querySelectorAll('.stat-card');
       if (statIndex[status] !== undefined && cards[statIndex[status]]) {
         cards[statIndex[status]].classList.add('active');
@@ -766,6 +821,9 @@
       if (filter !== '全部') {
         filtered = filtered.filter(a => a.status === filter);
       }
+      if (favFilter) {
+        filtered = filtered.filter(a => a.is_favorite);
+      }
       // 应用排序（默认排序时保持原始顺序即 sort_order）
       filtered = applySort(filtered);
       // 防止页码越界
@@ -774,13 +832,19 @@
 
       // 更新统计（一次遍历）
       const stats = { total: allAnimes.length, '在看': 0, '想看': 0, '看完': 0, '搁置': 0, '弃番': 0 };
-      for (const a of allAnimes) { if (stats[a.status] !== undefined) stats[a.status]++; }
+      let favCount = 0;
+      for (const a of allAnimes) {
+        if (stats[a.status] !== undefined) stats[a.status]++;
+        if (a.is_favorite) favCount++;
+      }
       document.getElementById('stat-total').textContent = stats.total;
       document.getElementById('stat-watching').textContent = stats['在看'];
       document.getElementById('stat-want').textContent = stats['想看'];
       document.getElementById('stat-done').textContent = stats['看完'];
       document.getElementById('stat-onhold').textContent = stats['搁置'];
       document.getElementById('stat-dropped').textContent = stats['弃番'];
+      const favEl = document.getElementById('stat-favorites');
+      if (favEl) favEl.textContent = favCount;
 
       const tbody = document.getElementById('table-body');
       const empty = document.getElementById('empty-state');
@@ -801,7 +865,16 @@
           const statusClassMap = { '想看': 'want', '在看': 'watching', '看完': 'done', '搁置': 'onhold', '弃番': 'dropped' };
           const statusClass = statusClassMap[item.status] || 'done';
           const statusIcon = statusIcons[item.status] || '✅';
-          const stars = item.rating ? '⭐'.repeat(Math.min(item.rating, 10)) : '-';
+          // 评分颜色：0-4灰 4-7蓝 7-9金 9-10彩
+          const r = parseFloat(item.rating) || 0;
+          let ratingColorClass = 'rating-none';
+          if (r > 0 && r < 4) ratingColorClass = 'rating-low';
+          else if (r >= 4 && r < 7) ratingColorClass = 'rating-mid';
+          else if (r >= 7 && r < 9) ratingColorClass = 'rating-high';
+          else if (r >= 9) ratingColorClass = 'rating-top';
+          const ratingDisplay = item.rating != null ? `<span class="rating-num ${ratingColorClass}">${parseFloat(item.rating).toFixed(1)}</span>` : '<span class="rating-num rating-none">-</span>';
+          // 收藏图标
+          const favIcon = item.is_favorite ? ' ⭐' : '';
           const yearSortIndicator = (sortColumn === 'year' && sortDir > 0) ? (sortDir === 1 ? ' ↓' : ' ↑') : '';
 const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropagation();event.preventDefault();toggleSort('year')"${yearSortIndicator ? ' style="color:var(--primary);opacity:1;"' : ''}>${item.year}${yearSortIndicator}</span>` : '';
           const titleDisplay = item.poster_url
@@ -839,15 +912,16 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
                 </div>
               </td>
               <td>
-                <span class="status-badge ${statusClass}">
-                  ${statusIcon} ${item.status}
+                <span class="status-badge ${statusClass} clickable-status" onclick="event.stopPropagation();cycleStatus(${item.id})" title="点击切换状态">
+                  ${statusIcon} ${item.status}${favIcon}
                 </span>
               </td>
               <td>
-                <span class="rating-stars" title="${item.rating || '未评分'} / 10">${stars}</span>
+                ${ratingDisplay}
               </td>
               <td>
                 <div class="actions-cell">
+                  <button class="btn btn-outline btn-sm fav-btn${item.is_favorite ? ' active' : ''}" onclick="toggleFavorite(${item.id})" title="${item.is_favorite ? '取消收藏' : '收藏'}">⭐</button>
                   <button class="btn btn-outline btn-sm" onclick="quickEdit(${item.id})" title="快速编辑">✏️</button>
                   <button class="btn btn-danger btn-sm" onclick="deleteAnime(${item.id})" title="删除">🗑️</button>
                 </div>
@@ -912,7 +986,7 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
       document.getElementById('input-total').value = anime.total_episodes || '';
       document.getElementById('input-watched').value = anime.watched_episodes || 0;
       document.getElementById('input-status').value = anime.status || '在看';
-      document.getElementById('input-rating').value = anime.rating || '';
+      document.getElementById('input-rating').value = anime.rating != null ? parseFloat(anime.rating).toFixed(1) : '';
       document.getElementById('input-poster').value = anime.poster_url || '';
       document.getElementById('input-notes').value = anime.notes || '';
       editingId = id;
@@ -1121,7 +1195,7 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
         document.getElementById('input-year').value = item.dataset.year;
       }
       if (item.dataset.rating) {
-        document.getElementById('input-rating').value = Math.round(parseFloat(item.dataset.rating));
+        document.getElementById('input-rating').value = parseFloat(item.dataset.rating).toFixed(1);
       }
       searchResults.classList.remove('open');
       animeSearchInput.value = '';
@@ -1139,7 +1213,7 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
         document.getElementById('input-year').value = item.dataset.year;
       }
       if (item.dataset.rating) {
-        document.getElementById('input-rating').value = Math.round(parseFloat(item.dataset.rating));
+        document.getElementById('input-rating').value = parseFloat(item.dataset.rating).toFixed(1);
       }
       if (item.dataset.synopsis) {
         document.getElementById('input-notes').value = item.dataset.synopsis.substring(0, 200);

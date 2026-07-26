@@ -550,6 +550,54 @@
       opacity: 0;
       transition: opacity .15s;
     }
+
+    /* ===== 评分数字颜色 ===== */
+    .rating-num {
+      font-weight: 700;
+      font-size: .95rem;
+    }
+    .rating-none { color: var(--text-secondary); }
+    .rating-low { color: #9ca3af; }   /* 0-4 灰 */
+    .rating-mid { color: #3b82f6; }    /* 4-7 蓝 */
+    .rating-high { color: #f59e0b; }   /* 7-9 金 */
+    .rating-top {                       /* 9-10 彩 */
+      background: linear-gradient(135deg, #f59e0b, #ef4444, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ===== 状态可点击 ===== */
+    .clickable-status {
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .clickable-status:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 6px rgba(99,102,241,.4);
+    }
+
+    /* ===== 收藏按钮 ===== */
+    .fav-btn {
+      opacity: .4;
+      transition: opacity .15s, transform .15s;
+    }
+    .fav-btn:hover,
+    .fav-btn.active {
+      opacity: 1;
+    }
+    .fav-btn.active {
+      background: rgba(251,191,36,0.2) !important;
+      border-color: #fbbf24;
+    }
+
+    /* ===== 手机端排序栏（仅手机可见） ===== */
+    .mobile-sort-bar { display: none; }
+
+    /* ===== 列不换行 ===== */
+    td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6) {
+      white-space: nowrap;
+    }
     /* ===== 拖动排序 ===== */
     .sortable-row {
       user-select: none;
@@ -1144,6 +1192,31 @@
       colgroup { display: none; }
       thead { display: none; }
 
+      /* ===== 手机端排序栏 ===== */
+      .mobile-sort-bar {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+        padding: 0;
+      }
+      .mobile-sort-item {
+        font-size: .75rem;
+        padding: 4px 8px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.22);
+        backdrop-filter: blur(4px);
+        border: 1px solid var(--border);
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+      }
+      .mobile-sort-item:active { background: rgba(99,102,241,0.2); }
+      @media (prefers-color-scheme: dark) {
+        .mobile-sort-item { background: rgba(30,41,59,0.35); }
+        .fav-btn.active { background: rgba(251,191,36,0.15) !important; }
+      }
+
       tbody tr {
         display: block;
         margin-bottom: 14px;
@@ -1166,6 +1239,8 @@
         border-bottom: none;
         font-size: .85rem;
       }
+      /* 除标题外所有列不换行 */
+      td:not(:first-child) { white-space: nowrap; }
 
       /* 卡片 - 标题行 */
       td:nth-child(1) {
