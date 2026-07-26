@@ -742,13 +742,28 @@
             try {
               const bgmRes = await fetch('/api/bangumi-proxy?q=' + encodeURIComponent(a.title));
               const bgmJson = await bgmRes.json();
-              const bgmItem = (bgmJson.list || [])[0];
-              if (bgmItem) {
+              const items = bgmJson.list || [];
+              if (items.length > 0) {
+                // 优先匹配标题最接近的结果，避免 OVA/剧场版等误匹配
+                const storedTitle = a.title.replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, '').toLowerCase();
+                let bestItem = items[0];
+                let bestScore = 0;
+                for (const item of items) {
+                  const itemTitle = (item.name_cn || item.name || '').replace(/\s+/g, '').toLowerCase();
+                  // 精确匹配优先
+                  if (itemTitle === storedTitle) { bestItem = item; break; }
+                  // 包含匹配得分
+                  if (itemTitle.includes(storedTitle) || storedTitle.includes(itemTitle)) {
+                    const score = Math.min(itemTitle.length, storedTitle.length) / Math.max(itemTitle.length, storedTitle.length);
+                    if (score > bestScore) { bestScore = score; bestItem = item; }
+                  }
+                }
+                const bgmTitle = bestItem.name_cn || bestItem.name || a.title;
                 media = {
-                  averageScore: bgmItem.score ? Math.round(parseFloat(bgmItem.score) * 10) : null,
-                  episodes: bgmItem.eps_count || null
+                  averageScore: bestItem.score ? Math.round(parseFloat(bestItem.score) * 10) : null,
+                  episodes: bestItem.eps_count || null
                 };
-                panel.set(i + 1, total, '🔍 Bangumi: ' + (bgmItem.name_cn || bgmItem.name || a.title), updated);
+                panel.set(i + 1, total, '🔍 Bangumi: ' + bgmTitle + (bestItem !== items[0] ? ' (匹配)' : ''), updated);
               }
             } catch (e) { /* Bangumi 失败静默跳过 */ }
           }
