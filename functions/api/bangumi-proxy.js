@@ -10,12 +10,18 @@ export async function onRequest(context) {
   }
 
   try {
+    // 全局超时 8s，超过则返回已有数据而非崩溃
+    const globalTimeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 8000)
+    );
+
+    const result = await Promise.race([globalTimeout, (async () => {
     // 第一步：搜索（取前 10 个结果，提高主系列命中率）
     const searchUrl = 'https://api.bgm.tv/search/subject/' + encodeURIComponent(q.trim())
       + '?type=2&responseGroup=small&max_results=10';
     const searchRes = await fetch(searchUrl, {
       headers: { 'User-Agent': 'AnimeTracker/1.0' },
-      signal: AbortSignal.timeout(5000)
+      signal: AbortSignal.timeout(4000)
     });
     if (!searchRes.ok) throw new Error(`Search HTTP ${searchRes.status}`);
     const searchData = await searchRes.json();
@@ -25,12 +31,12 @@ export async function onRequest(context) {
       return json({ list: [] });
     }
 
-    // 第二步：并行获取 v0 详情（2s 超时，避免函数总耗时超限）
+    // 第二步：并行获取 v0 详情（1.5s 超时，降级数据足够用）
     const enriched = await Promise.all(items.map(async (item) => {
       try {
         const detailRes = await fetch(`https://api.bgm.tv/v0/subjects/${item.id}`, {
           headers: { 'User-Agent': 'AnimeTracker/1.0' },
-          signal: AbortSignal.timeout(2000)
+          signal: AbortSignal.timeout(1500)
         });
         if (!detailRes.ok) throw new Error(`v0 HTTP ${detailRes.status}`);
         const d = await detailRes.json();
@@ -68,7 +74,11 @@ export async function onRequest(context) {
       200,
       { 'Cache-Control': 'public, max-age=600' }
     );
+    })()]);  // 结束 async IIFE 和 Promise.race
+
+    return result;
   } catch (err) {
+    if (err.message === 'timeout') return json({ list: [] });
     return json({ error: err.message }, 500);
   }
 }
