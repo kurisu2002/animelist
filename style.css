@@ -1,7 +1,7 @@
     @font-face {
       font-family: 'Lolita';
       src: url('lolita.ttf') format('truetype');
-      font-display: swap;
+      font-display: optional;
     }
 
     :root {
