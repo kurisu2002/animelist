@@ -140,8 +140,9 @@
         <input type="text" id="search-input" placeholder="搜索番剧名称..." oninput="debouncedSearch()">
         <button class="search-clear" id="search-clear" onclick="clearSearch()" title="清空搜索" style="display:none;">✕</button>
       </div>
+      <button class="btn btn-outline btn-sm" onclick="updateSelectedFromAniList()" title="更新所选番剧数据（需先批量勾选）" id="update-selected-btn">🔄</button>
       <button class="btn btn-outline btn-sm batch-toggle" id="batch-btn" onclick="toggleBatchMode()" title="批量操作">📋 批量</button>
-      <div class="custom-select" id="filter-status-select">
+      <div class="custom-select" id="filter-status-select" style="min-width:auto;">
         <div class="custom-select-trigger" onclick="toggleCustomSelect()">📋 全部</div>
         <div class="custom-select-dropdown" id="filter-dropdown">
           <div class="custom-select-option selected" data-value="全部" onclick="selectCustomOption('全部', '📋 全部')">📋 全部</div>
@@ -163,7 +164,6 @@
       <button class="btn btn-outline btn-sm batch-status-btn" onclick="batchSetStatus('在看')">📺 在看</button>
       <button class="btn btn-outline btn-sm batch-status-btn" onclick="batchSetStatus('看完')">✅ 看完</button>
       <button class="btn btn-outline btn-sm batch-status-btn" onclick="batchSetStatus('搁置')">⏸️ 搁置</button>
-      <button class="btn btn-outline btn-sm" onclick="updateSelectedFromAniList()" title="从 AniList 更新评分和总集数" style="background:rgba(99,102,241,0.15);">🔄 更新数据</button>
       <button class="btn btn-outline btn-sm" onclick="toggleBatchMode()" style="margin-left:auto;">取消</button>
     </div>
 

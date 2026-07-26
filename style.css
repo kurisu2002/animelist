@@ -317,17 +317,16 @@
       user-select: none;
     }
     .custom-select-trigger {
-      padding: 10px 16px;
+      padding: 8px 12px;
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       background: rgba(255,255,255,0.22);
       color: var(--text);
-      font-size: .95rem;
+      font-size: .85rem;
       cursor: pointer;
       backdrop-filter: blur(4px);
       white-space: nowrap;
       transition: border-color .2s;
-      min-width: 145px;
     }
     .custom-select-trigger:hover { border-color: var(--primary); }
     .custom-select-dropdown {
@@ -1207,7 +1206,7 @@
 
       /* ===== 工具栏移动端适配 ===== */
       .search-box { min-width: 140px; }
-      .custom-select-trigger { padding: 10px 12px; font-size: .85rem; min-width: 130px; }
+      .custom-select-trigger { padding: 8px 10px; font-size: .82rem; }
       .search-box input { font-size: .85rem; padding: 10px 16px 10px 36px; }
       .search-box .search-icon { left: 10px; font-size: 1rem; }
 
