@@ -293,7 +293,6 @@
       background: rgba(255,255,255,0.22);
     }
     #batch-count {
-      font-weight: 600;
       color: var(--primary);
       min-width: 60px;
     }
