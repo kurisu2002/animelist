@@ -758,15 +758,39 @@
     }
 
     function selectAllBatch() {
-      // 获取当前显示的所有番剧
       const search = (document.getElementById('search-input').value || '').toLowerCase();
       const filter = getSelectedFilter();
       let filtered = allAnimes;
       if (search) filtered = filtered.filter(a => a.title.toLowerCase().includes(search));
       if (filter !== '全部') filtered = filtered.filter(a => a.status === filter);
-      filtered.forEach(a => batchSelected.add(a.id));
+      if (favFilter) filtered = filtered.filter(a => a.is_favorite);
+      const allIds = new Set(filtered.map(a => a.id));
+      const allSelected = filtered.every(a => batchSelected.has(a.id));
+      if (allSelected) {
+        // 取消全选
+        allIds.forEach(id => batchSelected.delete(id));
+      } else {
+        // 全选
+        allIds.forEach(id => batchSelected.add(id));
+      }
       updateBatchCount();
+      updateSelectAllBtn();
       renderTable();
+    }
+
+    function updateSelectAllBtn() {
+      const search = (document.getElementById('search-input').value || '').toLowerCase();
+      const filter = getSelectedFilter();
+      let filtered = allAnimes;
+      if (search) filtered = filtered.filter(a => a.title.toLowerCase().includes(search));
+      if (filter !== '全部') filtered = filtered.filter(a => a.status === filter);
+      if (favFilter) filtered = filtered.filter(a => a.is_favorite);
+      const allSelected = filtered.length > 0 && filtered.every(a => batchSelected.has(a.id));
+      const btn = document.getElementById('select-all-btn');
+      if (btn) {
+        btn.textContent = allSelected ? '☑' : '☐';
+        btn.title = allSelected ? '取消全选' : '全选';
+      }
     }
 
     // ===== 收藏筛选 =====
@@ -833,6 +857,7 @@
 
     function updateBatchCount() {
       document.getElementById('batch-count').textContent = '已选 ' + batchSelected.size + ' 项';
+      updateSelectAllBtn();
     }
 
     async function batchSetStatus(status) {
