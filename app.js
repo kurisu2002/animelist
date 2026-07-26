@@ -1541,4 +1541,49 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
       const dateStr = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日 · ' + weekDays[now.getDay()];
       document.getElementById('daily-date').textContent = '📅 ' + dateStr;
       refreshQuote();
+
+      // ===== 一次性评分迁移：用 AniList 真实小数评分覆盖被四舍五入的整数评分 =====
+      if (!localStorage.getItem('rating-migrated-v1')) {
+        setTimeout(async () => {
+          if (!supabaseClient) return;
+          const toast = (msg) => {
+            const c = document.getElementById('toast-container');
+            if (!c) return;
+            const t = document.createElement('div');
+            t.className = 'toast'; t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 4000);
+          };
+          try {
+            const { data: animes } = await supabaseClient.from('animes').select('id,title,rating');
+            if (!animes || animes.length === 0) { localStorage.setItem('rating-migrated-v1', '1'); return; }
+            toast('🔄 正在从 AniList 获取真实评分...');
+            let updated = 0;
+            for (const a of animes) {
+              try {
+                const q = 'query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){averageScore}}}';
+                const res = await fetch('https://graphql.anilist.co', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ query: q, variables: { s: a.title } })
+                });
+                const json = await res.json();
+                const score = json?.data?.Page?.media?.[0]?.averageScore;
+                if (score) {
+                  const decimal = (score / 10).toFixed(1);
+                  const curr = a.rating ? parseFloat(a.rating).toFixed(1) : null;
+                  if (curr !== decimal) {
+                    await supabaseClient.from('animes').update({ rating: parseFloat(decimal) }).eq('id', a.id);
+                    updated++;
+                  }
+                }
+                await new Promise(r => setTimeout(r, 400)); // 避免 API 限流
+              } catch (e) { /* 单条失败跳过 */ }
+            }
+            toast('✅ 评分迁移完成！已更新 ' + updated + ' 部番剧');
+            localStorage.setItem('rating-migrated-v1', '1');
+            loadAnimes();
+          } catch (e) { /* 整体失败不阻塞 */ }
+        }, 2000);
+      }
     })();
