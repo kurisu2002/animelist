@@ -456,11 +456,38 @@
       }
     }
 
+    // 自定义确认弹窗（替代原生 confirm，居中美观）
+    function showConfirm(message, title = '确认', icon = '⚠️') {
+      return new Promise((resolve) => {
+        document.getElementById('confirm-icon').textContent = icon;
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-message').textContent = message;
+        const modal = document.getElementById('confirm-modal');
+        const okBtn = document.getElementById('confirm-ok-btn');
+        const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+        function cleanup() {
+          modal.style.display = 'none';
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+        }
+
+        function onOk() { cleanup(); resolve(true); }
+        function onCancel() { cleanup(); resolve(false); }
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        // 点击遮罩层关闭
+        modal.onclick = (e) => { if (e.target === modal) onCancel(); };
+        modal.style.display = 'flex';
+      });
+    }
+
     async function deleteAnime(id) {
       if (!supabaseClient) return;
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) { showToast('请先登录', 'error'); showAuthModal(); return; }
-      if (!confirm('确定要删除这部番吗？此操作不可撤销。')) return;
+      if (!await showConfirm('确定要删除这部番吗？此操作不可撤销。', '删除确认', '🗑️')) return;
 
       const { error } = await supabaseClient.from('animes').delete().eq('id', id);
       if (error) { showToast('删除失败: ' + error.message, 'error'); return; }
@@ -1017,7 +1044,7 @@
         showToast('⚠️ 请先勾选番剧', 'error');
         return;
       }
-      if (!confirm('确定将已选的 ' + batchSelected.size + ' 部番剧状态改为「' + status + '」？')) return;
+      if (!await showConfirm('确定将已选的 ' + batchSelected.size + ' 部番剧状态改为「' + status + '」？', '批量操作确认', '📋')) return;
 
       const ids = Array.from(batchSelected);
       let success = 0;
