@@ -559,10 +559,11 @@
       font-size: .95rem;
     }
     .rating-none { color: var(--text-secondary); }
-    .rating-low { color: #9ca3af; }   /* 0-4 灰 */
-    .rating-mid { color: #3b82f6; }    /* 4-7 蓝 */
-    .rating-high { color: #f59e0b; }   /* 7-9 金 */
-    .rating-top {                       /* 9-10 彩 */
+    .rating-low { color: #22c55e; }    /* <5 绿 */
+    .rating-mid { color: #3b82f6; }    /* 5-7 蓝 */
+    .rating-high { color: #a855f7; }   /* 7-8 紫 */
+    .rating-gold { color: #f59e0b; }   /* 8-9 金 */
+    .rating-top {                       /* 9+ 彩 */
       background: linear-gradient(135deg, #f59e0b, #ef4444, #8b5cf6);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;

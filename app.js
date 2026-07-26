@@ -1193,12 +1193,13 @@
           const statusClassMap = { '想看': 'want', '在看': 'watching', '看完': 'done', '搁置': 'onhold' };
           const statusClass = statusClassMap[item.status] || 'done';
           const statusIcon = statusIcons[item.status] || '✅';
-          // 评分颜色：0-4灰 4-7蓝 7-9金 9-10彩
+          // 评分颜色：<5绿 5-7蓝 7-8紫 8-9金 9+彩
           const r = parseFloat(item.rating) || 0;
           let ratingColorClass = 'rating-none';
-          if (r > 0 && r < 4) ratingColorClass = 'rating-low';
-          else if (r >= 4 && r < 7) ratingColorClass = 'rating-mid';
-          else if (r >= 7 && r < 9) ratingColorClass = 'rating-high';
+          if (r > 0 && r < 5) ratingColorClass = 'rating-low';
+          else if (r >= 5 && r < 7) ratingColorClass = 'rating-mid';
+          else if (r >= 7 && r < 8) ratingColorClass = 'rating-high';
+          else if (r >= 8 && r < 9) ratingColorClass = 'rating-gold';
           else if (r >= 9) ratingColorClass = 'rating-top';
           const ratingDisplay = item.rating != null ? `<span class="rating-num ${ratingColorClass}">${parseFloat(item.rating).toFixed(1)}</span>` : '<span class="rating-num rating-none">-</span>';
           // 收藏图标（显眼的金色星标）
