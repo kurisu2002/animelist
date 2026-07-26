@@ -1543,7 +1543,7 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
       refreshQuote();
 
       // ===== 一次性评分迁移：用 AniList 真实小数评分覆盖被四舍五入的整数评分 =====
-      if (!localStorage.getItem('rating-migrated-v1')) {
+      if (!localStorage.getItem('rating-migrated-v2')) {
         setTimeout(async () => {
           if (!supabaseClient) return;
           const bar = document.createElement('div');
@@ -1564,7 +1564,7 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
           };
           try {
             const { data: animes } = await supabaseClient.from('animes').select('id,title,rating');
-            if (!animes || animes.length === 0) { bar.remove(); localStorage.setItem('rating-migrated-v1', '1'); return; }
+            if (!animes || animes.length === 0) { bar.remove(); localStorage.setItem('rating-migrated-v2', '1'); return; }
             const total = animes.length;
             setProgress(0, total, '', 0);
             let updated = 0;
@@ -1595,7 +1595,7 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
             document.getElementById('migrate-msg').textContent = '✅ 评分迁移完成！已更新 ' + updated + ' 部';
             document.getElementById('migrate-detail').textContent = '';
             setTimeout(() => bar.remove(), 4000);
-            localStorage.setItem('rating-migrated-v1', '1');
+            localStorage.setItem('rating-migrated-v2', '1');
             loadAnimes();
           } catch (e) { bar.remove(); }
         }, 2000);
