@@ -745,6 +745,7 @@
             let bgmTitle = '';
             let bgmScore = -999;
             let bgmMatched = false;
+            let bgmBestName = ''; // Bangumi 日文名，用于反查 AniList ID
             try {
               const bgmRes = await fetch('/api/bangumi-proxy?q=' + encodeURIComponent(a.title));
               const bgmJson = await bgmRes.json();
@@ -789,6 +790,7 @@
                   };
                   bgmTitle = bestItem.name_cn || bestItem.name || a.title;
                   bgmMatched = bestItem !== items[0];
+                  bgmBestName = bestItem.name || ''; // 日文/罗马音名，用于反查 AniList
                 }
               }
             } catch (e) { /* Bangumi 失败静默跳过 */ }
@@ -797,8 +799,19 @@
             // AniList 中文搜索不可靠，有争议时信任 Bangumi
             if (bgmMedia && bgmScore >= 0.7) {
               media = bgmMedia;
-              // 如果 AniList 也找到了，借用其 ID 供后续精确查询
-              if (aniMedia?.id) media.id = aniMedia.id;
+              // 用 Bangumi 日文名反查 AniList 获取正确 ID（比中文搜索准确）
+              if (!a.anilist_id && bgmBestName) {
+                try {
+                  const aliasQ = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id}}}`;
+                  const aliasRes = await fetch('https://graphql.anilist.co', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: aliasQ, variables: { s: bgmBestName } })
+                  });
+                  const aliasJson = await aliasRes.json();
+                  const aliasMatch = aliasJson?.data?.Page?.media?.[0];
+                  if (aliasMatch?.id) media.id = aliasMatch.id;
+                } catch (e) { /* 静默跳过 */ }
+              }
               panel.set(i + 1, total, '🔍 Bangumi: ' + bgmTitle + (bgmMatched ? ' (匹配)' : ''), updated);
             } else if (aniMedia) {
               media = aniMedia;
