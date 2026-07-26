@@ -1264,11 +1264,16 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
     }
 
     function clearFormFields() {
-      ['input-title','input-year','input-total','input-watched','input-rating','input-poster','input-notes','input-anilist-id'].forEach(id => {
+      ['input-title','input-year','input-total','input-watched','input-rating','input-poster','input-notes','input-anilist-id','anime-search'].forEach(id => {
         document.getElementById(id).value = '';
       });
       document.getElementById('input-status').value = '想看';
       document.getElementById('input-watched').value = '0';
+      // 清空搜索结果下拉
+      const results = document.getElementById('search-results');
+      if (results) results.innerHTML = '';
+      // 刷新搜索框清除按钮状态
+      toggleInputClear('anime-search');
     }
 
     function clearForm() {
