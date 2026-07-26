@@ -665,8 +665,8 @@
     .episode-display {
       min-width: 36px;
       text-align: center;
-      font-weight: 600;
-      font-size: .95rem;
+      font-size: .85rem;
+      color: var(--text-secondary);
       cursor: pointer;
       padding: 4px 6px;
       border-radius: 6px;
