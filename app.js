@@ -1546,20 +1546,31 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
       if (!localStorage.getItem('rating-migrated-v1')) {
         setTimeout(async () => {
           if (!supabaseClient) return;
-          const toast = (msg) => {
-            const c = document.getElementById('toast-container');
-            if (!c) return;
-            const t = document.createElement('div');
-            t.className = 'toast'; t.textContent = msg;
-            c.appendChild(t);
-            setTimeout(() => t.remove(), 4000);
+          const bar = document.createElement('div');
+          bar.id = 'migrate-bar';
+          bar.innerHTML = '<div id="migrate-msg">🔄 正在从 AniList 获取真实评分...</div><div class="progress-bar-wrap" style="width:100%;height:4px;margin-top:4px;"><div id="migrate-fill" class="progress-bar-fill" style="width:0%"></div></div><div id="migrate-detail" style="font-size:.7rem;color:var(--text-secondary);"></div>';
+          Object.assign(bar.style, {
+            position:'fixed',bottom:'60px',right:'16px',zIndex:'9999',
+            background:'var(--card-bg)',border:'1px solid var(--border)',
+            borderRadius:'8px',padding:'10px 14px',boxShadow:'var(--shadow-lg)',
+            minWidth:'240px',maxWidth:'320px',fontSize:'.82rem'
+          });
+          document.body.appendChild(bar);
+          const setProgress = (i, total, title, changed) => {
+            const pct = Math.round((i/total)*100);
+            document.getElementById('migrate-fill').style.width = pct+'%';
+            document.getElementById('migrate-msg').textContent = `🔄 ${i}/${total} · 已更新 ${changed} 部`;
+            document.getElementById('migrate-detail').textContent = title || '';
           };
           try {
             const { data: animes } = await supabaseClient.from('animes').select('id,title,rating');
-            if (!animes || animes.length === 0) { localStorage.setItem('rating-migrated-v1', '1'); return; }
-            toast('🔄 正在从 AniList 获取真实评分...');
+            if (!animes || animes.length === 0) { bar.remove(); localStorage.setItem('rating-migrated-v1', '1'); return; }
+            const total = animes.length;
+            setProgress(0, total, '', 0);
             let updated = 0;
-            for (const a of animes) {
+            for (let i = 0; i < animes.length; i++) {
+              const a = animes[i];
+              setProgress(i + 1, total, '🔍 ' + a.title, updated);
               try {
                 const q = 'query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){averageScore}}}';
                 const res = await fetch('https://graphql.anilist.co', {
@@ -1575,15 +1586,18 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
                   if (curr !== decimal) {
                     await supabaseClient.from('animes').update({ rating: parseFloat(decimal) }).eq('id', a.id);
                     updated++;
+                    setProgress(i + 1, total, '✅ ' + a.title + ' → ' + decimal, updated);
                   }
                 }
-                await new Promise(r => setTimeout(r, 400)); // 避免 API 限流
-              } catch (e) { /* 单条失败跳过 */ }
+                await new Promise(r => setTimeout(r, 400));
+              } catch (e) { setProgress(i + 1, total, '⚠️ ' + a.title + ' 跳过', updated); }
             }
-            toast('✅ 评分迁移完成！已更新 ' + updated + ' 部番剧');
+            document.getElementById('migrate-msg').textContent = '✅ 评分迁移完成！已更新 ' + updated + ' 部';
+            document.getElementById('migrate-detail').textContent = '';
+            setTimeout(() => bar.remove(), 4000);
             localStorage.setItem('rating-migrated-v1', '1');
             loadAnimes();
-          } catch (e) { /* 整体失败不阻塞 */ }
+          } catch (e) { bar.remove(); }
         }, 2000);
       }
     })();
