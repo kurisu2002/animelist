@@ -756,20 +756,19 @@
 
             let items = [];
             for (const query of bgmQueries) {
-              // 带重试的 fetch（最多 2 次重试，间隔递增）
-              let bgmRes;
+              // 带重试的 fetch（最多 3 次，静默放弃不抛错）
+              let bgmRes, ok = false;
               for (let retry = 0; retry < 3; retry++) {
                 try {
                   bgmRes = await fetch('/api/bangumi-proxy?q=' + encodeURIComponent(query));
-                  if (bgmRes.ok) break;
-                } catch (e) {
-                  if (retry === 2) throw e;
-                  await new Promise(r => setTimeout(r, (retry + 1) * 500));
-                }
+                  if (bgmRes.ok) { ok = true; break; }
+                } catch (e) { /* 网络错误，重试 */ }
+                await new Promise(r => setTimeout(r, (retry + 1) * 600));
               }
+              if (!ok) continue; // 跳过这个查询，试下一个
               const bgmJson = await bgmRes.json();
               items = bgmJson.list || [];
-              if (items.length > 0) break; // 找到结果就停
+              if (items.length > 0) break;
             }
 
             if (items.length > 0) {
@@ -886,7 +885,12 @@
           console.error('更新出错: ' + a.title, e);
           panel.set(i + 1, total, '⚠️ ' + a.title + ': ' + (e.message || e), updated);
         }
-        await new Promise(r => setTimeout(r, 800));
+        // 每 10 个暂停 3s 冷却，避免触发 API 限流
+        if ((i + 1) % 10 === 0 && i + 1 < items.length) {
+          panel.set(i + 1, total, '⏳ 冷却中...', updated);
+          await new Promise(r => setTimeout(r, 3000));
+        }
+        await new Promise(r => setTimeout(r, 1000));
       }
       panel.done(total, updated);
       renderTable();
