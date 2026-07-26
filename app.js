@@ -708,37 +708,41 @@
           let media = null;
           let aniMedia = null; // AniList 结果（ID精确查 或 标题搜索）
 
-          if (a.anilist_id) {
-            // 有 AniList ID：直接按 ID 精确查询
-            const q = `query($id:Int){Media(id:$id,type:ANIME){averageScore episodes seasonYear}}`;
-            const res = await fetch('https://graphql.anilist.co', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ query: q, variables: { id: a.anilist_id } })
-            });
-            const json = await res.json();
-            aniMedia = json?.data?.Media;
-            if (!aniMedia) { a.anilist_id = null; } // ID 无效，清除后走搜索
-          }
-
-          if (!aniMedia) {
-            // 无有效 ID：AniList 按标题模糊搜索
-            const searchTerms = [a.title];
-            const cleaned = a.title.replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, ' ').trim();
-            if (cleaned && cleaned !== a.title && cleaned.length > 0) searchTerms.push(cleaned);
-            const parts = a.title.split(/[\/·\s]+/).filter(p => p.length > 1);
-            if (parts.length > 1) searchTerms.push(parts[parts.length - 1]);
-
-            for (const term of searchTerms) {
-              if (aniMedia) break;
-              const q = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id averageScore episodes seasonYear}}}`;
+          try {
+            if (a.anilist_id) {
+              // 有 AniList ID：直接按 ID 精确查询
+              const q = `query($id:Int){Media(id:$id,type:ANIME){averageScore episodes seasonYear}}`;
               const res = await fetch('https://graphql.anilist.co', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: q, variables: { s: term } })
+                body: JSON.stringify({ query: q, variables: { id: a.anilist_id } })
               });
               const json = await res.json();
-              aniMedia = json?.data?.Page?.media?.[0];
-              if (aniMedia) panel.set(i + 1, total, '🔍 AniList: ' + (searchTerms.length > 1 && term !== a.title ? '重试: ' + term : a.title), updated);
+              aniMedia = json?.data?.Media;
+              if (!aniMedia) { a.anilist_id = null; } // ID 无效，清除后走搜索
             }
+          } catch (e) { /* AniList ID 查询失败，回退搜索 */ }
+
+          if (!aniMedia) {
+            try {
+              // 无有效 ID：AniList 按标题模糊搜索
+              const searchTerms = [a.title];
+              const cleaned = a.title.replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, ' ').trim();
+              if (cleaned && cleaned !== a.title && cleaned.length > 0) searchTerms.push(cleaned);
+              const parts = a.title.split(/[\/·\s]+/).filter(p => p.length > 1);
+              if (parts.length > 1) searchTerms.push(parts[parts.length - 1]);
+
+              for (const term of searchTerms) {
+                if (aniMedia) break;
+                const q = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id averageScore episodes seasonYear}}}`;
+                const res = await fetch('https://graphql.anilist.co', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ query: q, variables: { s: term } })
+                });
+                const json = await res.json();
+                aniMedia = json?.data?.Page?.media?.[0];
+                if (aniMedia) panel.set(i + 1, total, '🔍 AniList: ' + (searchTerms.length > 1 && term !== a.title ? '重试: ' + term : a.title), updated);
+              }
+            } catch (e) { /* AniList 搜索失败 */ }
           }
 
           // Bangumi 搜索（始终执行，交叉验证——AniList ID 可能存错了）
