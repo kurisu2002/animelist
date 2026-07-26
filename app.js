@@ -737,6 +737,22 @@
               if (media) panel.set(i + 1, total, '🔍 ' + (searchTerms.length > 1 && term !== a.title ? '重试: ' + term : a.title), updated);
             }
           }
+          // AniList 未找到？尝试 Bangumi（支持中文搜索）
+          if (!media && !a.anilist_id) {
+            try {
+              const bgmRes = await fetch('/api/bangumi-proxy?q=' + encodeURIComponent(a.title));
+              const bgmJson = await bgmRes.json();
+              const bgmItem = (bgmJson.list || [])[0];
+              if (bgmItem) {
+                media = {
+                  averageScore: bgmItem.score ? Math.round(parseFloat(bgmItem.score) * 10) : null,
+                  episodes: bgmItem.eps_count || null
+                };
+                panel.set(i + 1, total, '🔍 Bangumi: ' + (bgmItem.name_cn || bgmItem.name || a.title), updated);
+              }
+            } catch (e) { /* Bangumi 失败静默跳过 */ }
+          }
+
           if (media) {
             const updates = {};
             // 评分：用 AniList 小数评分
