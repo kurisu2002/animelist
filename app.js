@@ -734,11 +734,17 @@
               const currEp = a.total_episodes || 0;
               if (currEp !== media.episodes) { updates.total_episodes = media.episodes; }
             }
+            // 如果是模糊搜索匹配到的，同时保存 AniList ID 供后续精确查询
+            if (!a.anilist_id && media.id) {
+              updates.anilist_id = media.id;
+              a.anilist_id = media.id;
+            }
             if (Object.keys(updates).length > 0) {
               await supabaseClient.from('animes').update(updates).eq('id', a.id);
               // 乐观更新本地
               if (updates.rating !== undefined) a.rating = updates.rating;
               if (updates.total_episodes !== undefined) a.total_episodes = updates.total_episodes;
+              if (updates.anilist_id !== undefined) a.anilist_id = updates.anilist_id;
               updated++;
               const parts = [];
               if (updates.rating !== undefined) parts.push('评分→' + updates.rating);
