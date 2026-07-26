@@ -656,6 +656,119 @@
       showToast(newFav ? '⭐ 已收藏' : '已取消收藏', 'success');
     }
 
+    // ===== AniList 数据更新（评分 + 总集数） =====
+    function showUpdatePanel() {
+      const old = document.getElementById('update-panel');
+      if (old) old.remove();
+      const bar = document.createElement('div');
+      bar.id = 'update-panel';
+      bar.innerHTML = '<div id="update-msg">🔄 准备中...</div><div class="progress-bar-wrap" style="width:100%;height:4px;margin-top:4px;"><div id="update-fill" class="progress-bar-fill" style="width:0%"></div></div><div id="update-detail" style="font-size:.7rem;color:var(--text-secondary);"></div>';
+      Object.assign(bar.style, {
+        position:'fixed',bottom:'60px',right:'16px',zIndex:'9999',
+        background:'var(--card-bg)',border:'1px solid var(--border)',
+        borderRadius:'8px',padding:'10px 14px',boxShadow:'var(--shadow-lg)',
+        minWidth:'240px',maxWidth:'320px',fontSize:'.82rem'
+      });
+      document.body.appendChild(bar);
+      return {
+        set: (i, total, detail, changed) => {
+          const pct = total > 0 ? Math.round((i/total)*100) : 0;
+          const f = document.getElementById('update-fill');
+          if (f) f.style.width = pct+'%';
+          const m = document.getElementById('update-msg');
+          if (m) m.textContent = `🔄 ${i}/${total} · 已更新 ${changed} 项`;
+          const d = document.getElementById('update-detail');
+          if (d) d.textContent = detail || '';
+        },
+        done: (total, changed) => {
+          const m = document.getElementById('update-msg');
+          if (m) m.textContent = `✅ 完成！${total} 部中更新了 ${changed} 部`;
+          const d = document.getElementById('update-detail');
+          if (d) d.textContent = '';
+          setTimeout(() => bar.remove(), 5000);
+        },
+        remove: () => bar.remove()
+      };
+    }
+
+    async function updateFromAniList(ids) {
+      if (!supabaseClient) { showToast('⚠️ 未连接数据库', 'error'); return; }
+      const panel = showUpdatePanel();
+      const items = ids.map(id => allAnimes.find(a => a.id === id)).filter(Boolean);
+      if (items.length === 0) { panel.done(0, 0); return; }
+      let updated = 0;
+      const total = items.length;
+      panel.set(0, total, '', 0);
+      for (let i = 0; i < items.length; i++) {
+        const a = items[i];
+        panel.set(i + 1, total, '🔍 搜索: ' + a.title, updated);
+        try {
+          const q = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){averageScore episodes}}}`;
+          const res = await fetch('https://graphql.anilist.co', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: q, variables: { s: a.title } })
+          });
+          const json = await res.json();
+          const media = json?.data?.Page?.media?.[0];
+          if (media) {
+            const updates = {};
+            // 评分：用 AniList 小数评分
+            if (media.averageScore) {
+              const decimal = parseFloat((media.averageScore / 10).toFixed(1));
+              const curr = a.rating ? parseFloat(a.rating) : null;
+              if (curr !== decimal) { updates.rating = decimal; }
+            }
+            // 总集数：用 AniList 数据（如果是有效数字且与现有不同）
+            if (media.episodes && media.episodes > 0) {
+              const currEp = a.total_episodes || 0;
+              if (currEp !== media.episodes) { updates.total_episodes = media.episodes; }
+            }
+            if (Object.keys(updates).length > 0) {
+              await supabaseClient.from('animes').update(updates).eq('id', a.id);
+              // 乐观更新本地
+              if (updates.rating !== undefined) a.rating = updates.rating;
+              if (updates.total_episodes !== undefined) a.total_episodes = updates.total_episodes;
+              updated++;
+              const parts = [];
+              if (updates.rating !== undefined) parts.push('评分→' + updates.rating);
+              if (updates.total_episodes !== undefined) parts.push('总集→' + updates.total_episodes);
+              panel.set(i + 1, total, '✅ ' + a.title + ' ' + parts.join(', '), updated);
+            } else {
+              panel.set(i + 1, total, '⏭️ ' + a.title + ' 无需更新', updated);
+            }
+          } else {
+            panel.set(i + 1, total, '❓ ' + a.title + ' 未找到', updated);
+          }
+        } catch (e) {
+          panel.set(i + 1, total, '⚠️ ' + a.title + ' 出错跳过', updated);
+        }
+        await new Promise(r => setTimeout(r, 400));
+      }
+      panel.done(total, updated);
+      renderTable();
+    }
+
+    function updateSelectedFromAniList() {
+      if (batchSelected.size === 0) { showToast('⚠️ 请先勾选番剧', 'error'); return; }
+      updateFromAniList(Array.from(batchSelected));
+    }
+
+    async function updateSingleFromAniList(id) {
+      updateFromAniList([id]);
+    }
+
+    function selectAllBatch() {
+      // 获取当前显示的所有番剧
+      const search = (document.getElementById('search-input').value || '').toLowerCase();
+      const filter = getSelectedFilter();
+      let filtered = allAnimes;
+      if (search) filtered = filtered.filter(a => a.title.toLowerCase().includes(search));
+      if (filter !== '全部') filtered = filtered.filter(a => a.status === filter);
+      filtered.forEach(a => batchSelected.add(a.id));
+      updateBatchCount();
+      renderTable();
+    }
+
     // ===== 收藏筛选 =====
     function filterFavorites() {
       favFilter = !favFilter;
@@ -954,6 +1067,7 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
               <td>
                 <div class="actions-cell">
                   <button class="btn btn-outline btn-sm fav-btn${item.is_favorite ? ' active' : ''}" onclick="toggleFavorite(${item.id})" title="${item.is_favorite ? '取消收藏' : '收藏'}">⭐</button>
+                  <button class="btn btn-outline btn-sm" onclick="updateSingleFromAniList(${item.id})" title="从 AniList 更新评分和总集数">🔄</button>
                   <button class="btn btn-outline btn-sm" onclick="quickEdit(${item.id})" title="快速编辑">✏️</button>
                   <button class="btn btn-danger btn-sm" onclick="deleteAnime(${item.id})" title="删除">🗑️</button>
                 </div>
@@ -1542,62 +1656,4 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
       document.getElementById('daily-date').textContent = '📅 ' + dateStr;
       refreshQuote();
 
-      // ===== 一次性评分迁移：用 AniList 真实小数评分覆盖被四舍五入的整数评分 =====
-      if (!localStorage.getItem('rating-migrated-v2')) {
-        setTimeout(async () => {
-          if (!supabaseClient) return;
-          const bar = document.createElement('div');
-          bar.id = 'migrate-bar';
-          bar.innerHTML = '<div id="migrate-msg">🔄 正在从 AniList 获取真实评分...</div><div class="progress-bar-wrap" style="width:100%;height:4px;margin-top:4px;"><div id="migrate-fill" class="progress-bar-fill" style="width:0%"></div></div><div id="migrate-detail" style="font-size:.7rem;color:var(--text-secondary);"></div>';
-          Object.assign(bar.style, {
-            position:'fixed',bottom:'60px',right:'16px',zIndex:'9999',
-            background:'var(--card-bg)',border:'1px solid var(--border)',
-            borderRadius:'8px',padding:'10px 14px',boxShadow:'var(--shadow-lg)',
-            minWidth:'240px',maxWidth:'320px',fontSize:'.82rem'
-          });
-          document.body.appendChild(bar);
-          const setProgress = (i, total, title, changed) => {
-            const pct = Math.round((i/total)*100);
-            document.getElementById('migrate-fill').style.width = pct+'%';
-            document.getElementById('migrate-msg').textContent = `🔄 ${i}/${total} · 已更新 ${changed} 部`;
-            document.getElementById('migrate-detail').textContent = title || '';
-          };
-          try {
-            const { data: animes } = await supabaseClient.from('animes').select('id,title,rating');
-            if (!animes || animes.length === 0) { bar.remove(); localStorage.setItem('rating-migrated-v2', '1'); return; }
-            const total = animes.length;
-            setProgress(0, total, '', 0);
-            let updated = 0;
-            for (let i = 0; i < animes.length; i++) {
-              const a = animes[i];
-              setProgress(i + 1, total, '🔍 ' + a.title, updated);
-              try {
-                const q = 'query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){averageScore}}}';
-                const res = await fetch('https://graphql.anilist.co', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ query: q, variables: { s: a.title } })
-                });
-                const json = await res.json();
-                const score = json?.data?.Page?.media?.[0]?.averageScore;
-                if (score) {
-                  const decimal = (score / 10).toFixed(1);
-                  const curr = a.rating ? parseFloat(a.rating).toFixed(1) : null;
-                  if (curr !== decimal) {
-                    await supabaseClient.from('animes').update({ rating: parseFloat(decimal) }).eq('id', a.id);
-                    updated++;
-                    setProgress(i + 1, total, '✅ ' + a.title + ' → ' + decimal, updated);
-                  }
-                }
-                await new Promise(r => setTimeout(r, 400));
-              } catch (e) { setProgress(i + 1, total, '⚠️ ' + a.title + ' 跳过', updated); }
-            }
-            document.getElementById('migrate-msg').textContent = '✅ 评分迁移完成！已更新 ' + updated + ' 部';
-            document.getElementById('migrate-detail').textContent = '';
-            setTimeout(() => bar.remove(), 4000);
-            localStorage.setItem('rating-migrated-v2', '1');
-            loadAnimes();
-          } catch (e) { bar.remove(); }
-        }, 2000);
-      }
     })();
