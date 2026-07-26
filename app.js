@@ -603,7 +603,10 @@
 
     // 排序比较函数
     function applySort(filtered) {
-      if (!sortColumn || sortDir === 0) return filtered;
+      // 默认排序：按 sort_order 升序
+      if (!sortColumn || sortDir === 0) {
+        return [...filtered].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+      }
 
       const statusOrder = { '想看': 1, '在看': 2, '看完': 3, '搁置': 4 };
       const sorted = [...filtered];
