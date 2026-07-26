@@ -268,8 +268,8 @@
       background: rgba(255,255,255,0.22) !important;
       backdrop-filter: blur(4px);
       flex-shrink: 0;
-      font-weight: 400;
-      color: var(--text-secondary);
+      font-weight: 400 !important;
+      color: var(--text-secondary) !important;
     }
     .batch-toggle.active {
       background: rgba(99,102,241,0.25) !important;
