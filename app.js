@@ -708,7 +708,7 @@
           let media = null;
           if (a.anilist_id) {
             // 有 AniList ID：直接按 ID 精确查询
-            const q = `query($id:Int){Media(id:$id,type:ANIME){averageScore episodes}}`;
+            const q = `query($id:Int){Media(id:$id,type:ANIME){averageScore episodes seasonYear}}`;
             const res = await fetch('https://graphql.anilist.co', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ query: q, variables: { id: a.anilist_id } })
@@ -730,7 +730,7 @@
 
             for (const term of searchTerms) {
               if (aniMedia) break;
-              const q = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id averageScore episodes}}}`;
+              const q = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id averageScore episodes seasonYear}}}`;
               const res = await fetch('https://graphql.anilist.co', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: q, variables: { s: term } })
@@ -784,7 +784,8 @@
                 if (bestScore > -999) {
                   bgmMedia = {
                     averageScore: bestItem.score ? Math.round(parseFloat(bestItem.score) * 10) : null,
-                    episodes: bestItem.eps_count || null
+                    episodes: bestItem.eps_count || null,
+                    seasonYear: bestItem.air_date ? parseInt(String(bestItem.air_date).substring(0, 4)) : null
                   };
                   bgmTitle = bestItem.name_cn || bestItem.name || a.title;
                   bgmMatched = bestItem !== items[0];
@@ -817,6 +818,11 @@
               const currEp = a.total_episodes || 0;
               if (currEp !== media.episodes) { updates.total_episodes = media.episodes; }
             }
+            // 年份更新
+            if (media.seasonYear && media.seasonYear > 1900) {
+              const currYear = a.year || 0;
+              if (currYear !== media.seasonYear) { updates.year = media.seasonYear; }
+            }
             // 如果是模糊搜索匹配到的，同时保存 AniList ID 供后续精确查询
             if (!a.anilist_id && media.id) {
               updates.anilist_id = media.id;
@@ -827,11 +833,13 @@
               // 乐观更新本地
               if (updates.rating !== undefined) a.rating = updates.rating;
               if (updates.total_episodes !== undefined) a.total_episodes = updates.total_episodes;
+              if (updates.year !== undefined) a.year = updates.year;
               if (updates.anilist_id !== undefined) a.anilist_id = updates.anilist_id;
               updated++;
               const parts = [];
               if (updates.rating !== undefined) parts.push('评分→' + updates.rating);
               if (updates.total_episodes !== undefined) parts.push('总集→' + updates.total_episodes);
+              if (updates.year !== undefined) parts.push('年份→' + updates.year);
               panel.set(i + 1, total, '✅ ' + a.title + ' ' + parts.join(', '), updated);
             } else {
               panel.set(i + 1, total, '⏭️ ' + a.title + ' 无需更新', updated);
