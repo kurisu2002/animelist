@@ -459,11 +459,11 @@
       min-width: 700px;
     }
     thead {
-      position: sticky;
-      top: 0;
       z-index: 1;
     }
     th {
+      position: sticky;
+      top: 0;
       background: rgba(255,255,255,0.22);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
