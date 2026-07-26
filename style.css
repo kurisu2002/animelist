@@ -269,6 +269,7 @@
       backdrop-filter: blur(4px);
       flex-shrink: 0;
       font-weight: 400;
+      color: var(--text-secondary);
     }
     .batch-toggle.active {
       background: rgba(99,102,241,0.25) !important;
@@ -322,7 +323,7 @@
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       background: rgba(255,255,255,0.22);
-      color: var(--text);
+      color: var(--text-secondary);
       font-size: .85rem;
       cursor: pointer;
       backdrop-filter: blur(4px);
