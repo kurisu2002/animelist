@@ -706,6 +706,8 @@
         panel.set(i + 1, total, '🔍 搜索: ' + a.title, updated);
         try {
           let media = null;
+          let aniMedia = null; // AniList 结果（ID精确查 或 标题搜索）
+
           if (a.anilist_id) {
             // 有 AniList ID：直接按 ID 精确查询
             const q = `query($id:Int){Media(id:$id,type:ANIME){averageScore episodes seasonYear}}`;
@@ -714,14 +716,12 @@
               body: JSON.stringify({ query: q, variables: { id: a.anilist_id } })
             });
             const json = await res.json();
-            media = json?.data?.Media;
-            if (!media) { a.anilist_id = null; } // ID 无效，清除后走搜索
+            aniMedia = json?.data?.Media;
+            if (!aniMedia) { a.anilist_id = null; } // ID 无效，清除后走搜索
           }
-          if (!media) {
-            // 无 ID：AniList 中文搜索不可靠，同时查 Bangumi 交叉验证
-            let aniMedia = null;
 
-            // AniList 搜索（按名称模糊搜索 + 简化重试）
+          if (!aniMedia) {
+            // 无有效 ID：AniList 按标题模糊搜索
             const searchTerms = [a.title];
             const cleaned = a.title.replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, ' ').trim();
             if (cleaned && cleaned !== a.title && cleaned.length > 0) searchTerms.push(cleaned);
@@ -739,83 +739,84 @@
               aniMedia = json?.data?.Page?.media?.[0];
               if (aniMedia) panel.set(i + 1, total, '🔍 AniList: ' + (searchTerms.length > 1 && term !== a.title ? '重试: ' + term : a.title), updated);
             }
+          }
 
-            // Bangumi 搜索（不管 AniList 找到与否都查，交叉验证中文标题）
-            let bgmMedia = null;
-            let bgmTitle = '';
-            let bgmScore = -999;
-            let bgmMatched = false;
-            let bgmBestName = ''; // Bangumi 日文名，用于反查 AniList ID
-            try {
-              const bgmRes = await fetch('/api/bangumi-proxy?q=' + encodeURIComponent(a.title));
-              const bgmJson = await bgmRes.json();
-              const items = bgmJson.list || [];
-              if (items.length > 0) {
-                // 增强匹配：标题相似度 + 季/OVA扣分 + 年份加分
-                const storedTitle = a.title.replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, '').toLowerCase();
-                const seasonRe = /第[一二三四五六七八九十\d]+[季期卷部弹]|[sS]eason\s*\d|OVA|剧场版|劇場版|特別篇|总集篇|總集篇|SP\b|OAD|番外|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/;
-                const allYears = items.map(it => it.air_date ? parseInt(String(it.air_date).substring(0, 4)) : NaN).filter(Boolean);
-                const minYear = allYears.length > 0 ? Math.min(...allYears) : null;
+          // Bangumi 搜索（始终执行，交叉验证——AniList ID 可能存错了）
+          let bgmMedia = null;
+          let bgmTitle = '';
+          let bgmScore = -999;
+          let bgmMatched = false;
+          let bgmBestName = '';
+          try {
+            const bgmRes = await fetch('/api/bangumi-proxy?q=' + encodeURIComponent(a.title));
+            const bgmJson = await bgmRes.json();
+            const items = bgmJson.list || [];
+            if (items.length > 0) {
+              const storedTitle = a.title.replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, '').toLowerCase();
+              const seasonRe = /第[一二三四五六七八九十\d]+[季期卷部弹]|[sS]eason\s*\d|OVA|剧场版|劇場版|特別篇|总集篇|總集篇|SP\b|OAD|番外|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/;
+              const allYears = items.map(it => it.air_date ? parseInt(String(it.air_date).substring(0, 4)) : NaN).filter(Boolean);
+              const minYear = allYears.length > 0 ? Math.min(...allYears) : null;
 
-                let bestItem = items[0];
-                let bestScore = -999;
+              let bestItem = items[0];
+              let bestScore = -999;
 
-                for (const item of items) {
-                  const itemTitle = (item.name_cn || item.name || '').replace(/\s+/g, '').toLowerCase();
-                  if (itemTitle === storedTitle) { bestItem = item; bestScore = 1.0; break; }
-                  if (itemTitle.includes(storedTitle) || storedTitle.includes(itemTitle)) {
-                    let score = Math.min(itemTitle.length, storedTitle.length) / Math.max(itemTitle.length, storedTitle.length);
-                    const extraLen = Math.abs(itemTitle.length - storedTitle.length);
-                    score -= extraLen * 0.015;
-                    if (!seasonRe.test(storedTitle)) {
-                      const extra = itemTitle.replace(storedTitle, '');
-                      if (seasonRe.test(extra)) score -= 0.3;
-                    }
-                    if (a.year && item.air_date) {
-                      const itemYear = parseInt(String(item.air_date).substring(0, 4));
-                      if (itemYear === parseInt(String(a.year))) score += 0.2;
-                    }
-                    if (minYear && item.air_date && parseInt(String(item.air_date).substring(0, 4)) === minYear) {
-                      score += 0.05;
-                    }
-                    if (score > bestScore) { bestScore = score; bestItem = item; }
+              for (const item of items) {
+                const itemTitle = (item.name_cn || item.name || '').replace(/\s+/g, '').toLowerCase();
+                if (itemTitle === storedTitle) { bestItem = item; bestScore = 1.0; break; }
+                if (itemTitle.includes(storedTitle) || storedTitle.includes(itemTitle)) {
+                  let score = Math.min(itemTitle.length, storedTitle.length) / Math.max(itemTitle.length, storedTitle.length);
+                  const extraLen = Math.abs(itemTitle.length - storedTitle.length);
+                  score -= extraLen * 0.015;
+                  if (!seasonRe.test(storedTitle)) {
+                    const extra = itemTitle.replace(storedTitle, '');
+                    if (seasonRe.test(extra)) score -= 0.3;
                   }
-                }
-                bgmScore = bestScore;
-                if (bestScore > -999) {
-                  bgmMedia = {
-                    averageScore: bestItem.score ? Math.round(parseFloat(bestItem.score) * 10) : null,
-                    episodes: bestItem.eps_count || null,
-                    seasonYear: bestItem.air_date ? parseInt(String(bestItem.air_date).substring(0, 4)) : null
-                  };
-                  bgmTitle = bestItem.name_cn || bestItem.name || a.title;
-                  bgmMatched = bestItem !== items[0];
-                  bgmBestName = bestItem.name || ''; // 日文/罗马音名，用于反查 AniList
+                  if (a.year && item.air_date) {
+                    const itemYear = parseInt(String(item.air_date).substring(0, 4));
+                    if (itemYear === parseInt(String(a.year))) score += 0.2;
+                  }
+                  if (minYear && item.air_date && parseInt(String(item.air_date).substring(0, 4)) === minYear) {
+                    score += 0.05;
+                  }
+                  if (score > bestScore) { bestScore = score; bestItem = item; }
                 }
               }
-            } catch (e) { /* Bangumi 失败静默跳过 */ }
-
-            // 决策：Bangumi 高置信度(≥0.7) 或 精确匹配(1.0) → 优先
-            // AniList 中文搜索不可靠，有争议时信任 Bangumi
-            if (bgmMedia && bgmScore >= 0.7) {
-              media = bgmMedia;
-              // 用 Bangumi 日文名反查 AniList 获取正确 ID（比中文搜索准确）
-              if (!a.anilist_id && bgmBestName) {
-                try {
-                  const aliasQ = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id}}}`;
-                  const aliasRes = await fetch('https://graphql.anilist.co', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: aliasQ, variables: { s: bgmBestName } })
-                  });
-                  const aliasJson = await aliasRes.json();
-                  const aliasMatch = aliasJson?.data?.Page?.media?.[0];
-                  if (aliasMatch?.id) media.id = aliasMatch.id;
-                } catch (e) { /* 静默跳过 */ }
+              bgmScore = bestScore;
+              if (bestScore > -999) {
+                bgmMedia = {
+                  averageScore: bestItem.score ? Math.round(parseFloat(bestItem.score) * 10) : null,
+                  episodes: bestItem.eps_count || null,
+                  seasonYear: bestItem.air_date ? parseInt(String(bestItem.air_date).substring(0, 4)) : null
+                };
+                bgmTitle = bestItem.name_cn || bestItem.name || a.title;
+                bgmMatched = bestItem !== items[0];
+                bgmBestName = bestItem.name || '';
               }
-              panel.set(i + 1, total, '🔍 Bangumi: ' + bgmTitle + (bgmMatched ? ' (匹配)' : ''), updated);
-            } else if (aniMedia) {
-              media = aniMedia;
             }
+          } catch (e) { /* Bangumi 失败静默跳过 */ }
+
+          // 决策：Bangumi 高置信度(≥0.7) 优先于 AniList
+          // AniList 的 ID 可能来自之前错误匹配，Bangumi 中文搜索更可靠
+          if (bgmMedia && bgmScore >= 0.7) {
+            media = bgmMedia;
+            // 用 Bangumi 日文名反查 AniList 获取正确 ID
+            if (!a.anilist_id && bgmBestName) {
+              try {
+                const aliasQ = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id}}}`;
+                const aliasRes = await fetch('https://graphql.anilist.co', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ query: aliasQ, variables: { s: bgmBestName } })
+                });
+                const aliasJson = await aliasRes.json();
+                const aliasMatch = aliasJson?.data?.Page?.media?.[0];
+                if (aliasMatch?.id) media.id = aliasMatch.id;
+              } catch (e) { /* 静默跳过 */ }
+            }
+            // Bangumi 赢 → 清除可能错误的旧 AniList ID，用新获取的正确 ID
+            if (a.anilist_id) { a.anilist_id = null; }
+            panel.set(i + 1, total, '🔍 Bangumi: ' + bgmTitle + (bgmMatched ? ' (匹配)' : ''), updated);
+          } else if (aniMedia) {
+            media = aniMedia;
           }
 
           if (media) {
