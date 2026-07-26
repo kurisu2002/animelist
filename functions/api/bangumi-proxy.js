@@ -15,7 +15,7 @@ export async function onRequest(context) {
       + '?type=2&responseGroup=small&max_results=10';
     const searchRes = await fetch(searchUrl, {
       headers: { 'User-Agent': 'AnimeTracker/1.0' },
-      signal: AbortSignal.timeout(8000)
+      signal: AbortSignal.timeout(5000)
     });
     if (!searchRes.ok) throw new Error(`Search HTTP ${searchRes.status}`);
     const searchData = await searchRes.json();
@@ -25,12 +25,12 @@ export async function onRequest(context) {
       return json({ list: [] });
     }
 
-    // 第二步：并行获取 v0 详情（3s 超时，只取必要字段）
+    // 第二步：并行获取 v0 详情（2s 超时，避免函数总耗时超限）
     const enriched = await Promise.all(items.map(async (item) => {
       try {
         const detailRes = await fetch(`https://api.bgm.tv/v0/subjects/${item.id}`, {
           headers: { 'User-Agent': 'AnimeTracker/1.0' },
-          signal: AbortSignal.timeout(3000)
+          signal: AbortSignal.timeout(2000)
         });
         if (!detailRes.ok) throw new Error(`v0 HTTP ${detailRes.status}`);
         const d = await detailRes.json();
