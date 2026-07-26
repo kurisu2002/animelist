@@ -561,7 +561,7 @@
     function applySort(filtered) {
       if (!sortColumn || sortDir === 0) return filtered;
 
-      const statusOrder = { '想看': 1, '在看': 2, '看完': 3, '搁置': 4, '弃番': 5 };
+      const statusOrder = { '想看': 1, '在看': 2, '看完': 3, '搁置': 4 };
       const sorted = [...filtered];
 
       sorted.sort((a, b) => {
@@ -598,7 +598,7 @@
     }
 
     // ===== 状态点击弹出下拉选择 =====
-    const statusCycle = ['想看', '在看', '看完', '搁置', '弃番'];
+    const statusCycle = ['想看', '在看', '看完', '搁置'];
     let statusMenuId = null; // 当前打开状态菜单的番剧ID
 
     function showStatusMenu(id, event) {
@@ -614,7 +614,7 @@
       menu.style.top = (rect.bottom + 2) + 'px';
       menu.style.left = Math.min(rect.left, window.innerWidth - 140) + 'px';
       const anime = allAnimes.find(a => a.id === id);
-      const icons = { '想看': '👀', '在看': '📺', '看完': '✅', '搁置': '⏸️', '弃番': '🚫' };
+      const icons = { '想看': '👀', '在看': '📺', '看完': '✅', '搁置': '⏸️' };
       statusCycle.forEach(s => {
         const opt = document.createElement('div');
         opt.className = 'status-dropdown-option' + (anime && anime.status === s ? ' current' : '');
@@ -661,8 +661,8 @@
       favFilter = !favFilter;
       document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
       const cards = document.querySelectorAll('.stat-card');
-      if (favFilter && cards[6]) {
-        cards[6].classList.add('active');
+      if (favFilter && cards[5]) {
+        cards[5].classList.add('active');
       } else {
         favFilter = false;
         // 回到全部
@@ -775,7 +775,7 @@
       }
 
       // 更新自定义下拉的选中状态
-      const labels = { '全部': '📋 全部', '想看': '👀 想看', '在看': '📺 在看', '看完': '✅ 看完', '搁置': '⏸️ 搁置', '弃番': '🚫 弃番', '收藏': '⭐ 收藏' };
+      const labels = { '全部': '📋 全部', '想看': '👀 想看', '在看': '📺 在看', '看完': '✅ 看完', '搁置': '⏸️ 搁置', '收藏': '⭐ 收藏' };
       document.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
       const opt = document.querySelector(`.custom-select-option[data-value="${status}"]`);
       if (opt) opt.classList.add('selected');
@@ -784,7 +784,7 @@
 
       // 更新卡片高亮
       document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
-      const statIndex = { '全部': 0, '在看': 1, '想看': 2, '看完': 3, '搁置': 4, '弃番': 5, '收藏': 6 };
+      const statIndex = { '全部': 0, '在看': 1, '想看': 2, '看完': 3, '搁置': 4, '收藏': 5 };
       const cards = document.querySelectorAll('.stat-card');
       if (statIndex[status] !== undefined && cards[statIndex[status]]) {
         cards[statIndex[status]].classList.add('active');
@@ -797,7 +797,7 @@
     function restoreFilterFromHash() {
       if (location.hash) {
         const status = decodeURIComponent(location.hash.slice(1));
-        const validStatuses = ['全部', '想看', '在看', '看完', '搁置', '弃番'];
+        const validStatuses = ['全部', '想看', '在看', '看完', '搁置'];
         if (validStatuses.includes(status)) {
           return status;
         }
@@ -864,7 +864,7 @@
       if (currentPage > maxPage) currentPage = maxPage;
 
       // 更新统计（一次遍历）
-      const stats = { total: allAnimes.length, '在看': 0, '想看': 0, '看完': 0, '搁置': 0, '弃番': 0 };
+      const stats = { total: allAnimes.length, '在看': 0, '想看': 0, '看完': 0, '搁置': 0 };
       let favCount = 0;
       for (const a of allAnimes) {
         if (stats[a.status] !== undefined) stats[a.status]++;
@@ -875,7 +875,6 @@
       document.getElementById('stat-want').textContent = stats['想看'];
       document.getElementById('stat-done').textContent = stats['看完'];
       document.getElementById('stat-onhold').textContent = stats['搁置'];
-      document.getElementById('stat-dropped').textContent = stats['弃番'];
       const favEl = document.getElementById('stat-favorites');
       if (favEl) favEl.textContent = favCount;
 
@@ -894,8 +893,8 @@
           const maxEp = item.total_episodes || 0;
           const watched = item.watched_episodes || 0;
           const progressPercent = maxEp > 0 ? Math.round((watched / maxEp) * 100) : 0;
-          const statusIcons = { '想看': '👀', '在看': '📺', '看完': '✅', '搁置': '⏸️', '弃番': '🚫' };
-          const statusClassMap = { '想看': 'want', '在看': 'watching', '看完': 'done', '搁置': 'onhold', '弃番': 'dropped' };
+          const statusIcons = { '想看': '👀', '在看': '📺', '看完': '✅', '搁置': '⏸️' };
+          const statusClassMap = { '想看': 'want', '在看': 'watching', '看完': 'done', '搁置': 'onhold' };
           const statusClass = statusClassMap[item.status] || 'done';
           const statusIcon = statusIcons[item.status] || '✅';
           // 评分颜色：0-4灰 4-7蓝 7-9金 9-10彩
