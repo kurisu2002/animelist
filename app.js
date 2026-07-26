@@ -409,6 +409,7 @@
         // 编辑模式：更新已有记录
         ({ error } = await supabaseClient.from('animes').update(saveData).eq('id', editingId));
         if (error) { showToast('修改失败: ' + error.message, 'error'); return; }
+        moveToTop(editingId); // 编辑后置顶
         showToast('✅ 修改成功！', 'success');
       } else {
         // 新增模式：插入新记录，sort_order 设为最大值 + 1
@@ -422,6 +423,18 @@
       clearForm();
       toggleAddPanel(false);
       loadAnimes();
+    }
+
+    // 将番剧移到默认排序的最上面
+    async function moveToTop(id) {
+      const minOrder = allAnimes.length > 0 ? Math.min(...allAnimes.map(a => a.sort_order || 0)) : 0;
+      const newOrder = minOrder - 1;
+      const idx = allAnimes.findIndex(a => a.id === id);
+      if (idx !== -1) {
+        allAnimes[idx].sort_order = newOrder;
+        localStorage.setItem('anime-tracker-cache', JSON.stringify(allAnimes));
+      }
+      await supabaseClient.from('animes').update({ sort_order: newOrder }).eq('id', id);
     }
 
     async function updateField(id, field, value) {
@@ -451,6 +464,8 @@
         showToast('更新失败: ' + error.message, 'error');
         loadAnimes(); // 回滚
       } else {
+        moveToTop(id); // 更新后置顶
+        renderTable(); // 重新渲染以反映新排序位置
         const rowEl = document.querySelector(`tr[data-id="${id}"]`);
         if (rowEl) { rowEl.classList.add('row-saved'); setTimeout(() => rowEl.classList.remove('row-saved'), 600); }
       }
@@ -669,6 +684,7 @@
       const { error } = await supabaseClient.from('animes').update({ status }).eq('id', id);
       if (error) { showToast('❌ 更新失败', 'error'); return; }
       anime.status = status;
+      moveToTop(id);
       renderTable();
     }
 
@@ -900,6 +916,7 @@
               if (updates.total_episodes !== undefined) a.total_episodes = updates.total_episodes;
               if (updates.year !== undefined) a.year = updates.year;
               if (updates.anilist_id !== undefined) a.anilist_id = updates.anilist_id;
+              moveToTop(a.id); // 更新后置顶
               updated++;
               const parts = [];
               if (updates.rating !== undefined) parts.push('评分→' + updates.rating);
@@ -1047,10 +1064,15 @@
       if (!await showConfirm('确定将已选的 ' + batchSelected.size + ' 部番剧状态改为「' + status + '」？', '批量操作确认', '📋')) return;
 
       const ids = Array.from(batchSelected);
+      const minOrder = allAnimes.length > 0 ? Math.min(...allAnimes.map(a => a.sort_order || 0)) : 0;
       let success = 0;
-      for (const id of ids) {
-        const { err } = await supabaseClient.from('animes').update({ status: status }).eq('id', id);
-        if (!err) success++;
+      for (let i = 0; i < ids.length; i++) {
+        const { error } = await supabaseClient.from('animes').update({ status, sort_order: minOrder - 1 - i }).eq('id', ids[i]);
+        if (!error) {
+          const anime = allAnimes.find(a => a.id === ids[i]);
+          if (anime) { anime.status = status; anime.sort_order = minOrder - 1 - i; }
+          success++;
+        }
       }
       showToast('✅ 已更新 ' + success + '/' + ids.length + ' 部', 'success');
       batchSelected.clear();
