@@ -756,7 +756,17 @@
 
             let items = [];
             for (const query of bgmQueries) {
-              const bgmRes = await fetch('/api/bangumi-proxy?q=' + encodeURIComponent(query));
+              // 带重试的 fetch（最多 2 次重试，间隔递增）
+              let bgmRes;
+              for (let retry = 0; retry < 3; retry++) {
+                try {
+                  bgmRes = await fetch('/api/bangumi-proxy?q=' + encodeURIComponent(query));
+                  if (bgmRes.ok) break;
+                } catch (e) {
+                  if (retry === 2) throw e;
+                  await new Promise(r => setTimeout(r, (retry + 1) * 500));
+                }
+              }
               const bgmJson = await bgmRes.json();
               items = bgmJson.list || [];
               if (items.length > 0) break; // 找到结果就停
@@ -876,7 +886,7 @@
           console.error('更新出错: ' + a.title, e);
           panel.set(i + 1, total, '⚠️ ' + a.title + ': ' + (e.message || e), updated);
         }
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 800));
       }
       panel.done(total, updated);
       renderTable();
