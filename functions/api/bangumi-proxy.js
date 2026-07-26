@@ -10,9 +10,9 @@ export async function onRequest(context) {
   }
 
   try {
-    // 第一步：搜索（取前 6 个结果）
+    // 第一步：搜索（取前 10 个结果，提高主系列命中率）
     const searchUrl = 'https://api.bgm.tv/search/subject/' + encodeURIComponent(q.trim())
-      + '?type=2&responseGroup=small&max_results=6';
+      + '?type=2&responseGroup=small&max_results=10';
     const searchRes = await fetch(searchUrl, {
       headers: { 'User-Agent': 'AnimeTracker/1.0' },
       signal: AbortSignal.timeout(8000)

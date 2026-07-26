@@ -744,17 +744,46 @@
               const bgmJson = await bgmRes.json();
               const items = bgmJson.list || [];
               if (items.length > 0) {
-                // 优先匹配标题最接近的结果，避免 OVA/剧场版等误匹配
+                // 增强匹配：标题相似度 + 季/OVA扣分 + 年份加分，避免误匹配续作/OVA
                 const storedTitle = a.title.replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, '').toLowerCase();
+                // 番季/OVA/SP 标识正则
+                const seasonRe = /第[一二三四五六七八九十\d]+[季期卷部弹]|[sS]eason\s*\d|OVA|剧场版|劇場版|特別篇|总集篇|總集篇|SP\b|OAD|番外|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/;
+                // 找最早年份：主系列通常是第一季，加成优先
+                const allYears = items.map(it => it.air_date ? parseInt(String(it.air_date).substring(0, 4)) : NaN).filter(Boolean);
+                const minYear = allYears.length > 0 ? Math.min(...allYears) : null;
+
                 let bestItem = items[0];
-                let bestScore = 0;
+                let bestScore = -999;
+
                 for (const item of items) {
                   const itemTitle = (item.name_cn || item.name || '').replace(/\s+/g, '').toLowerCase();
                   // 精确匹配优先
                   if (itemTitle === storedTitle) { bestItem = item; break; }
                   // 包含匹配得分
                   if (itemTitle.includes(storedTitle) || storedTitle.includes(itemTitle)) {
-                    const score = Math.min(itemTitle.length, storedTitle.length) / Math.max(itemTitle.length, storedTitle.length);
+                    let score = Math.min(itemTitle.length, storedTitle.length) / Math.max(itemTitle.length, storedTitle.length);
+
+                    // 额外字符惩罚：标题越长越可能加了多余信息
+                    const extraLen = Math.abs(itemTitle.length - storedTitle.length);
+                    score -= extraLen * 0.015;
+
+                    // 结果含季/OVA标记但原标题没有 → 较大扣分
+                    if (!seasonRe.test(storedTitle)) {
+                      const extra = itemTitle.replace(storedTitle, '');
+                      if (seasonRe.test(extra)) score -= 0.3;
+                    }
+
+                    // 年份匹配加分
+                    if (a.year && item.air_date) {
+                      const itemYear = parseInt(String(item.air_date).substring(0, 4));
+                      if (itemYear === parseInt(String(a.year))) score += 0.2;
+                    }
+
+                    // 最早年份加成（主系列）
+                    if (minYear && item.air_date && parseInt(String(item.air_date).substring(0, 4)) === minYear) {
+                      score += 0.05;
+                    }
+
                     if (score > bestScore) { bestScore = score; bestItem = item; }
                   }
                 }
