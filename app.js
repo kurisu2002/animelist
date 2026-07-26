@@ -385,6 +385,7 @@
         watched = w ? parseInt(w) : 0;
       }
 
+      const anilistId = document.getElementById('input-anilist-id').value;
       const year = document.getElementById('input-year').value;
       const rating = document.getElementById('input-rating').value;
       const poster = document.getElementById('input-poster').value.trim();
@@ -401,6 +402,7 @@
       if (poster) saveData.poster_url = poster;
       if (notes) saveData.notes = notes;
       saveData.year = year ? parseInt(year) : null;
+      if (anilistId) saveData.anilist_id = parseInt(anilistId);
 
       let error;
       if (editingId) {
@@ -703,13 +705,22 @@
         const a = items[i];
         panel.set(i + 1, total, '🔍 搜索: ' + a.title, updated);
         try {
-          const q = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){averageScore episodes}}}`;
+          let q, vars;
+          if (a.anilist_id) {
+            // 有 AniList ID：直接按 ID 精确查询
+            q = `query($id:Int){Media(id:$id,type:ANIME){averageScore episodes}}`;
+            vars = { id: a.anilist_id };
+          } else {
+            // 无 ID：按名称模糊搜索（可能不准确）
+            q = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id averageScore episodes}}}`;
+            vars = { s: a.title };
+          }
           const res = await fetch('https://graphql.anilist.co', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: q, variables: { s: a.title } })
+            body: JSON.stringify({ query: q, variables: vars })
           });
           const json = await res.json();
-          const media = json?.data?.Page?.media?.[0];
+          const media = a.anilist_id ? json?.data?.Media : json?.data?.Page?.media?.[0];
           if (media) {
             const updates = {};
             // 评分：用 AniList 小数评分
@@ -1135,7 +1146,7 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
     }
 
     function clearFormFields() {
-      ['input-title','input-year','input-total','input-watched','input-rating','input-poster','input-notes'].forEach(id => {
+      ['input-title','input-year','input-total','input-watched','input-rating','input-poster','input-notes','input-anilist-id'].forEach(id => {
         document.getElementById(id).value = '';
       });
       document.getElementById('input-status').value = '想看';
@@ -1160,6 +1171,7 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
       document.getElementById('input-rating').value = anime.rating != null ? parseFloat(anime.rating).toFixed(1) : '';
       document.getElementById('input-poster').value = anime.poster_url || '';
       document.getElementById('input-notes').value = anime.notes || '';
+      document.getElementById('input-anilist-id').value = anime.anilist_id || '';
       editingId = id;
       const submitBtn = document.querySelector('#add-panel .btn-primary');
       if (submitBtn) submitBtn.textContent = '💾 保存修改';
@@ -1389,6 +1401,8 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
       if (item.dataset.synopsis) {
         document.getElementById('input-notes').value = item.dataset.synopsis.substring(0, 200);
       }
+      // 存储 AniList ID 供后续精确更新
+      document.getElementById('input-anilist-id').value = item.dataset.malid || '';
 
       searchResults.classList.remove('open');
       animeSearchInput.value = '';
