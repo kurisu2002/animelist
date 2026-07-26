@@ -146,13 +146,14 @@
       </div>
       <button class="btn btn-outline btn-sm batch-toggle" id="batch-btn" onclick="toggleBatchMode()" title="批量操作">📋 批量</button>
       <div class="custom-select" id="filter-status-select">
-        <div class="custom-select-trigger" onclick="toggleCustomSelect()">📋 全部状态</div>
+        <div class="custom-select-trigger" onclick="toggleCustomSelect()">📋 全部</div>
         <div class="custom-select-dropdown" id="filter-dropdown">
-          <div class="custom-select-option selected" data-value="全部" onclick="selectCustomOption('全部', '📋 全部状态')">📋 全部状态</div>
+          <div class="custom-select-option selected" data-value="全部" onclick="selectCustomOption('全部', '📋 全部')">📋 全部</div>
           <div class="custom-select-option" data-value="想看" onclick="selectCustomOption('想看', '👀 想看')">👀 想看</div>
           <div class="custom-select-option" data-value="在看" onclick="selectCustomOption('在看', '📺 在看')">📺 在看</div>
           <div class="custom-select-option" data-value="看完" onclick="selectCustomOption('看完', '✅ 看完')">✅ 看完</div>
           <div class="custom-select-option" data-value="搁置" onclick="selectCustomOption('搁置', '⏸️ 搁置')">⏸️ 搁置</div>
+          <div class="custom-select-option" data-value="收藏" onclick="selectCustomOption('收藏', '⭐ 收藏')">⭐ 收藏</div>
         </div>
       </div>
     </div>

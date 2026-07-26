@@ -597,17 +597,49 @@
       return sorted;
     }
 
-    // ===== 状态点击循环切换 =====
+    // ===== 状态点击弹出下拉选择 =====
     const statusCycle = ['想看', '在看', '看完', '搁置', '弃番'];
-    async function cycleStatus(id) {
+    let statusMenuId = null; // 当前打开状态菜单的番剧ID
+
+    function showStatusMenu(id, event) {
+      event.stopPropagation();
+      if (statusMenuId === id) { closeStatusMenu(); return; } // 再点关闭
+      closeStatusMenu();
+      statusMenuId = id;
+      const badge = event.currentTarget;
+      const rect = badge.getBoundingClientRect();
+      const menu = document.createElement('div');
+      menu.className = 'status-dropdown-menu';
+      menu.id = 'status-dropdown-menu';
+      menu.style.top = (rect.bottom + 2) + 'px';
+      menu.style.left = Math.min(rect.left, window.innerWidth - 140) + 'px';
       const anime = allAnimes.find(a => a.id === id);
-      if (!anime) return;
-      const curIdx = statusCycle.indexOf(anime.status);
-      const nextStatus = statusCycle[(curIdx + 1) % statusCycle.length];
+      const icons = { '想看': '👀', '在看': '📺', '看完': '✅', '搁置': '⏸️', '弃番': '🚫' };
+      statusCycle.forEach(s => {
+        const opt = document.createElement('div');
+        opt.className = 'status-dropdown-option' + (anime && anime.status === s ? ' current' : '');
+        opt.textContent = icons[s] + ' ' + s;
+        opt.onclick = (e) => { e.stopPropagation(); selectStatus(id, s); };
+        menu.appendChild(opt);
+      });
+      document.body.appendChild(menu);
+      setTimeout(() => document.addEventListener('click', closeStatusMenu, { once: true }), 0);
+    }
+
+    function closeStatusMenu() {
+      statusMenuId = null;
+      const menu = document.getElementById('status-dropdown-menu');
+      if (menu) menu.remove();
+    }
+
+    async function selectStatus(id, status) {
+      closeStatusMenu();
+      const anime = allAnimes.find(a => a.id === id);
+      if (!anime || anime.status === status) return;
       if (!supabaseClient) { showToast('⚠️ 未连接数据库', 'error'); return; }
-      const { error } = await supabaseClient.from('animes').update({ status: nextStatus }).eq('id', id);
+      const { error } = await supabaseClient.from('animes').update({ status }).eq('id', id);
       if (error) { showToast('❌ 更新失败', 'error'); return; }
-      anime.status = nextStatus;
+      anime.status = status;
       renderTable();
     }
 
@@ -743,11 +775,12 @@
       }
 
       // 更新自定义下拉的选中状态
-      const labels = { '全部': '📋 全部状态', '想看': '👀 想看', '在看': '📺 在看', '看完': '✅ 看完', '搁置': '⏸️ 搁置', '弃番': '🚫 弃番' };
+      const labels = { '全部': '📋 全部', '想看': '👀 想看', '在看': '📺 在看', '看完': '✅ 看完', '搁置': '⏸️ 搁置', '弃番': '🚫 弃番', '收藏': '⭐ 收藏' };
       document.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
       const opt = document.querySelector(`.custom-select-option[data-value="${status}"]`);
       if (opt) opt.classList.add('selected');
-      document.querySelector('.custom-select-trigger').textContent = labels[status] || '📋 全部状态';
+      document.querySelector('.custom-select-trigger').textContent = labels[status] || '📋 全部';
+      favFilter = (status === '收藏');
 
       // 更新卡片高亮
       document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
@@ -873,8 +906,8 @@
           else if (r >= 7 && r < 9) ratingColorClass = 'rating-high';
           else if (r >= 9) ratingColorClass = 'rating-top';
           const ratingDisplay = item.rating != null ? `<span class="rating-num ${ratingColorClass}">${parseFloat(item.rating).toFixed(1)}</span>` : '<span class="rating-num rating-none">-</span>';
-          // 收藏图标
-          const favIcon = item.is_favorite ? ' ⭐' : '';
+          // 收藏图标（显眼的金色星标）
+          const favIcon = item.is_favorite ? ' <span class="fav-star" title="已收藏">⭐</span>' : '';
           const yearSortIndicator = (sortColumn === 'year' && sortDir > 0) ? (sortDir === 1 ? ' ↓' : ' ↑') : '';
 const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropagation();event.preventDefault();toggleSort('year')"${yearSortIndicator ? ' style="color:var(--primary);opacity:1;"' : ''}>${item.year}${yearSortIndicator}</span>` : '';
           const titleDisplay = item.poster_url
@@ -912,7 +945,7 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
                 </div>
               </td>
               <td>
-                <span class="status-badge ${statusClass} clickable-status" onclick="event.stopPropagation();cycleStatus(${item.id})" title="点击切换状态">
+                <span class="status-badge ${statusClass} clickable-status" onclick="showStatusMenu(${item.id}, event)" title="点击选择状态">
                   ${statusIcon} ${item.status}${favIcon}
                 </span>
               </td>
