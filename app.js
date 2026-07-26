@@ -1436,7 +1436,8 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
                  data-episodes="${eps}"
                  data-poster="${escapeAttr(poster)}"
                  data-rating="${score}"
-                 data-year="${bgmYear}">
+                 data-year="${bgmYear}"
+                 data-jp-name="${escapeAttr(jpTitle)}">
               ${thumb ? `<img src="${thumb}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">` : '<div style="width:40px;height:56px;background:var(--border);border-radius:4px;flex-shrink:0;"></div>'}
               <div class="search-result-info">
                 <div class="title">🇨🇳 ${mainTitle}${subTitle ? ' <small style="color:var(--text-secondary);">/ ' + subTitle + '</small>' : ''}</div>
@@ -1514,9 +1515,29 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
       if (item.dataset.rating) {
         document.getElementById('input-rating').value = parseFloat(item.dataset.rating).toFixed(1);
       }
+      // 清空旧的 AniList ID（Bangumi 结果需重新反查）
+      document.getElementById('input-anilist-id').value = '';
       searchResults.classList.remove('open');
       animeSearchInput.value = '';
+      // 用 Bangumi 日文名反查 AniList ID（供后续精确更新）
+      if (item.dataset.jpName) {
+        fetchAniListId(item.dataset.jpName).then(alid => {
+          if (alid) document.getElementById('input-anilist-id').value = alid;
+        });
+      }
       showToast('✅ 已自动填充「' + item.dataset.title + '」', 'success');
+    }
+
+    async function fetchAniListId(name) {
+      try {
+        const q = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id}}}`;
+        const res = await fetch('https://graphql.anilist.co', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: q, variables: { s: name } })
+        });
+        const json = await res.json();
+        return json?.data?.Page?.media?.[0]?.id || null;
+      } catch (e) { return null; }
     }
 
     function selectAnime(malId) {
