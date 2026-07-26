@@ -503,7 +503,7 @@
     let sortColumn = null;   // 当前排序列: 'title'|'progress'|'status'|'rating'|'year'
     let sortDir = 0;         // 0=默认, 1=倒序, 2=正序
     let favFilter = false;   // 是否仅显示收藏
-    const PAGE_SIZE = 20;
+    const PAGE_SIZE = 12;
     let searchDebounceTimer = null;
 
     function debouncedSearch() {
