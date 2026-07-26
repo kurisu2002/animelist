@@ -454,7 +454,8 @@
     table {
       width: 100%;
       table-layout: fixed;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       min-width: 700px;
     }
     thead {
