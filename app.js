@@ -748,9 +748,20 @@
           let bgmMatched = false;
           let bgmBestName = '';
           try {
-            const bgmRes = await fetch('/api/bangumi-proxy?q=' + encodeURIComponent(a.title));
-            const bgmJson = await bgmRes.json();
-            const items = bgmJson.list || [];
+            // 搜索词列表：原标题 + 去掉番季后缀的基础标题（如「第2部分」「Season 2」）
+            const baseTitle = a.title.replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, ' ').trim();
+            const noSuffix = baseTitle.replace(/[-\s]*第[一二三四五六七八九十\d]+[季期部分部弹卷]|[-\s]*[sS]eason\s*\d+|[-\s]*Part\s*\d+|[-]*最终季|[-]*完结篇/g, '').trim();
+            const bgmQueries = [a.title];
+            if (noSuffix && noSuffix !== a.title && noSuffix.length > 0) bgmQueries.push(noSuffix);
+
+            let items = [];
+            for (const query of bgmQueries) {
+              const bgmRes = await fetch('/api/bangumi-proxy?q=' + encodeURIComponent(query));
+              const bgmJson = await bgmRes.json();
+              items = bgmJson.list || [];
+              if (items.length > 0) break; // 找到结果就停
+            }
+
             if (items.length > 0) {
               const storedTitle = a.title.replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, '').toLowerCase();
               const seasonRe = /第[一二三四五六七八九十\d]+[季期卷部弹]|[sS]eason\s*\d|OVA|剧场版|劇場版|特別篇|总集篇|總集篇|SP\b|OAD|番外|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/;
