@@ -458,14 +458,14 @@
       min-width: 700px;
     }
     thead {
-      background: rgba(255,255,255,0.22);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
       position: sticky;
       top: 0;
       z-index: 1;
     }
     th {
+      background: rgba(255,255,255,0.22);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       padding: 14px 16px;
       text-align: left;
       font-size: .8rem;
@@ -1191,7 +1191,7 @@
       .stat-card { background: rgba(30,41,59,0.22); }
       .add-panel { background: rgba(30,41,59,0.55); }
       .table-wrapper { background: rgba(30,41,59,0.22); }
-      thead { background: rgba(30,41,59,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+      th { background: rgba(30,41,59,0.35); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
       .pagination button { background: rgba(30,41,59,0.20); }
       .form-grid input, .form-grid select { background: rgba(30,41,59,0.22); }
       .anime-search-wrap input { background: rgba(30,41,59,0.22); }
