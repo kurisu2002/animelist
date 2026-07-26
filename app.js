@@ -705,22 +705,38 @@
         const a = items[i];
         panel.set(i + 1, total, '🔍 搜索: ' + a.title, updated);
         try {
-          let q, vars;
+          let media = null;
           if (a.anilist_id) {
             // 有 AniList ID：直接按 ID 精确查询
-            q = `query($id:Int){Media(id:$id,type:ANIME){averageScore episodes}}`;
-            vars = { id: a.anilist_id };
+            const q = `query($id:Int){Media(id:$id,type:ANIME){averageScore episodes}}`;
+            const res = await fetch('https://graphql.anilist.co', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: q, variables: { id: a.anilist_id } })
+            });
+            const json = await res.json();
+            media = json?.data?.Media;
           } else {
-            // 无 ID：按名称模糊搜索（可能不准确）
-            q = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id averageScore episodes}}}`;
-            vars = { s: a.title };
+            // 无 ID：按名称模糊搜索，失败时尝试简化标题重试
+            const searchTerms = [a.title];
+            // 去掉括号内容作为备选搜索词
+            const cleaned = a.title.replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, ' ').trim();
+            if (cleaned && cleaned !== a.title && cleaned.length > 0) searchTerms.push(cleaned);
+            // 如果标题含中文，也尝试用后半段（可能是英文名）
+            const parts = a.title.split(/[\/·\s]+/).filter(p => p.length > 1);
+            if (parts.length > 1) searchTerms.push(parts[parts.length - 1]);
+
+            for (const term of searchTerms) {
+              if (media) break;
+              const q = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id averageScore episodes}}}`;
+              const res = await fetch('https://graphql.anilist.co', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: q, variables: { s: term } })
+              });
+              const json = await res.json();
+              media = json?.data?.Page?.media?.[0];
+              if (media) panel.set(i + 1, total, '🔍 ' + (searchTerms.length > 1 && term !== a.title ? '重试: ' + term : a.title), updated);
+            }
           }
-          const res = await fetch('https://graphql.anilist.co', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: q, variables: vars })
-          });
-          const json = await res.json();
-          const media = a.anilist_id ? json?.data?.Media : json?.data?.Page?.media?.[0];
           if (media) {
             const updates = {};
             // 评分：用 AniList 小数评分
