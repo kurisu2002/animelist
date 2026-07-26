@@ -296,6 +296,7 @@
     #batch-count {
       color: var(--primary);
       min-width: 60px;
+      font-weight: 400;
     }
     .batch-checkbox {
       width: 18px; height: 18px;
