@@ -715,40 +715,44 @@
             });
             const json = await res.json();
             media = json?.data?.Media;
-          } else {
-            // 无 ID：按名称模糊搜索，失败时尝试简化标题重试
+            if (!media) { a.anilist_id = null; } // ID 无效，清除后走搜索
+          }
+          if (!media) {
+            // 无 ID：AniList 中文搜索不可靠，同时查 Bangumi 交叉验证
+            let aniMedia = null;
+
+            // AniList 搜索（按名称模糊搜索 + 简化重试）
             const searchTerms = [a.title];
-            // 去掉括号内容作为备选搜索词
             const cleaned = a.title.replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, ' ').trim();
             if (cleaned && cleaned !== a.title && cleaned.length > 0) searchTerms.push(cleaned);
-            // 如果标题含中文，也尝试用后半段（可能是英文名）
             const parts = a.title.split(/[\/·\s]+/).filter(p => p.length > 1);
             if (parts.length > 1) searchTerms.push(parts[parts.length - 1]);
 
             for (const term of searchTerms) {
-              if (media) break;
+              if (aniMedia) break;
               const q = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id averageScore episodes}}}`;
               const res = await fetch('https://graphql.anilist.co', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: q, variables: { s: term } })
               });
               const json = await res.json();
-              media = json?.data?.Page?.media?.[0];
-              if (media) panel.set(i + 1, total, '🔍 ' + (searchTerms.length > 1 && term !== a.title ? '重试: ' + term : a.title), updated);
+              aniMedia = json?.data?.Page?.media?.[0];
+              if (aniMedia) panel.set(i + 1, total, '🔍 AniList: ' + (searchTerms.length > 1 && term !== a.title ? '重试: ' + term : a.title), updated);
             }
-          }
-          // AniList 未找到？尝试 Bangumi（支持中文搜索）
-          if (!media && !a.anilist_id) {
+
+            // Bangumi 搜索（不管 AniList 找到与否都查，交叉验证中文标题）
+            let bgmMedia = null;
+            let bgmTitle = '';
+            let bgmScore = -999;
+            let bgmMatched = false;
             try {
               const bgmRes = await fetch('/api/bangumi-proxy?q=' + encodeURIComponent(a.title));
               const bgmJson = await bgmRes.json();
               const items = bgmJson.list || [];
               if (items.length > 0) {
-                // 增强匹配：标题相似度 + 季/OVA扣分 + 年份加分，避免误匹配续作/OVA
+                // 增强匹配：标题相似度 + 季/OVA扣分 + 年份加分
                 const storedTitle = a.title.replace(/[（(][^)）]*[)）]/g, '').replace(/\s+/g, '').toLowerCase();
-                // 番季/OVA/SP 标识正则
                 const seasonRe = /第[一二三四五六七八九十\d]+[季期卷部弹]|[sS]eason\s*\d|OVA|剧场版|劇場版|特別篇|总集篇|總集篇|SP\b|OAD|番外|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]/;
-                // 找最早年份：主系列通常是第一季，加成优先
                 const allYears = items.map(it => it.air_date ? parseInt(String(it.air_date).substring(0, 4)) : NaN).filter(Boolean);
                 const minYear = allYears.length > 0 ? Math.min(...allYears) : null;
 
@@ -757,44 +761,47 @@
 
                 for (const item of items) {
                   const itemTitle = (item.name_cn || item.name || '').replace(/\s+/g, '').toLowerCase();
-                  // 精确匹配优先
-                  if (itemTitle === storedTitle) { bestItem = item; break; }
-                  // 包含匹配得分
+                  if (itemTitle === storedTitle) { bestItem = item; bestScore = 1.0; break; }
                   if (itemTitle.includes(storedTitle) || storedTitle.includes(itemTitle)) {
                     let score = Math.min(itemTitle.length, storedTitle.length) / Math.max(itemTitle.length, storedTitle.length);
-
-                    // 额外字符惩罚：标题越长越可能加了多余信息
                     const extraLen = Math.abs(itemTitle.length - storedTitle.length);
                     score -= extraLen * 0.015;
-
-                    // 结果含季/OVA标记但原标题没有 → 较大扣分
                     if (!seasonRe.test(storedTitle)) {
                       const extra = itemTitle.replace(storedTitle, '');
                       if (seasonRe.test(extra)) score -= 0.3;
                     }
-
-                    // 年份匹配加分
                     if (a.year && item.air_date) {
                       const itemYear = parseInt(String(item.air_date).substring(0, 4));
                       if (itemYear === parseInt(String(a.year))) score += 0.2;
                     }
-
-                    // 最早年份加成（主系列）
                     if (minYear && item.air_date && parseInt(String(item.air_date).substring(0, 4)) === minYear) {
                       score += 0.05;
                     }
-
                     if (score > bestScore) { bestScore = score; bestItem = item; }
                   }
                 }
-                const bgmTitle = bestItem.name_cn || bestItem.name || a.title;
-                media = {
-                  averageScore: bestItem.score ? Math.round(parseFloat(bestItem.score) * 10) : null,
-                  episodes: bestItem.eps_count || null
-                };
-                panel.set(i + 1, total, '🔍 Bangumi: ' + bgmTitle + (bestItem !== items[0] ? ' (匹配)' : ''), updated);
+                bgmScore = bestScore;
+                if (bestScore > -999) {
+                  bgmMedia = {
+                    averageScore: bestItem.score ? Math.round(parseFloat(bestItem.score) * 10) : null,
+                    episodes: bestItem.eps_count || null
+                  };
+                  bgmTitle = bestItem.name_cn || bestItem.name || a.title;
+                  bgmMatched = bestItem !== items[0];
+                }
               }
             } catch (e) { /* Bangumi 失败静默跳过 */ }
+
+            // 决策：Bangumi 高置信度(≥0.7) 或 精确匹配(1.0) → 优先
+            // AniList 中文搜索不可靠，有争议时信任 Bangumi
+            if (bgmMedia && bgmScore >= 0.7) {
+              media = bgmMedia;
+              // 如果 AniList 也找到了，借用其 ID 供后续精确查询
+              if (aniMedia?.id) media.id = aniMedia.id;
+              panel.set(i + 1, total, '🔍 Bangumi: ' + bgmTitle + (bgmMatched ? ' (匹配)' : ''), updated);
+            } else if (aniMedia) {
+              media = aniMedia;
+            }
           }
 
           if (media) {
