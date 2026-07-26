@@ -454,8 +454,7 @@
     table {
       width: 100%;
       table-layout: fixed;
-      border-collapse: separate;
-      border-spacing: 0;
+      border-collapse: collapse;
       min-width: 700px;
     }
     thead {
@@ -538,6 +537,7 @@
       white-space: nowrap;
       cursor: pointer;
       transition: color .15s;
+      align-self: flex-start;
     }
     .title-year:hover {
       color: var(--primary);
