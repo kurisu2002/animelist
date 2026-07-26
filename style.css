@@ -333,7 +333,7 @@
       position: absolute;
       top: calc(100% + 4px);
       left: 0;
-      right: 0;
+      min-width: 130px;
       background: rgba(255,255,255,0.55);
       backdrop-filter: blur(12px);
       border: 1px solid var(--border);
@@ -350,6 +350,7 @@
       font-size: .9rem;
       color: var(--text);
       transition: background .15s;
+      white-space: nowrap;
     }
     .custom-select-option:hover { background: rgba(99,102,241,0.12); }
     .custom-select-option.selected { background: rgba(99,102,241,0.18); font-weight: 600; }
