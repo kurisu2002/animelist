@@ -1004,6 +1004,14 @@
     });
 
     function filterByStatus(status) {
+      // 点击已激活的卡片 → 取消筛选，回到全部
+      const statIndex = { '全部': 0, '在看': 1, '想看': 2, '看完': 3, '搁置': 4, '收藏': 5 };
+      const cards = document.querySelectorAll('.stat-card');
+      const targetCard = cards[statIndex[status]];
+      if (targetCard && targetCard.classList.contains('active') && status !== '全部') {
+        status = '全部';
+      }
+
       favFilter = false; // 切换状态筛选时取消收藏筛选
       // 更新 URL hash（可分享链接）
       if (status === '全部') {
@@ -1022,9 +1030,7 @@
 
       // 更新卡片高亮
       document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
-      const statIndex = { '全部': 0, '在看': 1, '想看': 2, '看完': 3, '搁置': 4, '收藏': 5 };
-      const cards = document.querySelectorAll('.stat-card');
-      if (statIndex[status] !== undefined && cards[statIndex[status]]) {
+      if (cards[statIndex[status]]) {
         cards[statIndex[status]].classList.add('active');
       }
       currentPage = 1;
