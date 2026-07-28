@@ -405,11 +405,11 @@
       if (anilistId) saveData.anilist_id = parseInt(anilistId);
 
       let error;
-      if (editingId) {
+      const editedId = editingId; // 保存 ID（clearForm 会清掉）
+      if (editedId) {
         // 编辑模式：更新已有记录
-        ({ error } = await supabaseClient.from('animes').update(saveData).eq('id', editingId));
+        ({ error } = await supabaseClient.from('animes').update(saveData).eq('id', editedId));
         if (error) { showToast('修改失败: ' + error.message, 'error'); return; }
-        moveToTop(editingId); // 编辑后置顶
         showToast('✅ 修改成功！', 'success');
       } else {
         // 新增模式：插入新记录，sort_order 设为最大值 + 1
@@ -422,7 +422,8 @@
 
       clearForm();
       toggleAddPanel(false);
-      loadAnimes();
+      await loadAnimes();
+      if (editedId) moveToTop(editedId); // 静默置顶，下次刷新/切分类后生效
     }
 
     // 将番剧移到默认排序的最上面
@@ -464,8 +465,9 @@
         showToast('更新失败: ' + error.message, 'error');
         loadAnimes(); // 回滚
       } else {
-        moveToTop(id); // 更新后置顶
-        renderTable(); // 重新渲染以反映新排序位置
+        // 静默置顶：只更新 sort_order，不立即重新渲染
+        // 等页面刷新 / 切换类别 / 翻页后才在新位置显示
+        moveToTop(id);
         const rowEl = document.querySelector(`tr[data-id="${id}"]`);
         if (rowEl) { rowEl.classList.add('row-saved'); setTimeout(() => rowEl.classList.remove('row-saved'), 600); }
       }
@@ -687,8 +689,8 @@
       const { error } = await supabaseClient.from('animes').update({ status }).eq('id', id);
       if (error) { showToast('❌ 更新失败', 'error'); return; }
       anime.status = status;
-      moveToTop(id);
-      renderTable();
+      renderTable();  // 先渲染状态变化（保持原位置）
+      moveToTop(id);  // 再静默置顶，下次刷新/切分类后生效
     }
 
     // ===== 收藏切换 =====
@@ -746,6 +748,7 @@
       if (items.length === 0) { panel.done(0, 0); return; }
       let updated = 0;
       const total = items.length;
+      const movedIds = []; // 收集需要置顶的 ID，在 renderTable 之后处理
       panel.set(0, total, '', 0);
       for (let i = 0; i < items.length; i++) {
         const a = items[i];
@@ -919,7 +922,7 @@
               if (updates.total_episodes !== undefined) a.total_episodes = updates.total_episodes;
               if (updates.year !== undefined) a.year = updates.year;
               if (updates.anilist_id !== undefined) a.anilist_id = updates.anilist_id;
-              moveToTop(a.id); // 更新后置顶
+              movedIds.push(a.id); // 收集 ID，稍后静默置顶
               updated++;
               const parts = [];
               if (updates.rating !== undefined) parts.push('评分→' + updates.rating);
@@ -945,6 +948,10 @@
       }
       panel.done(total, updated);
       renderTable();
+      // 静默置顶：渲染完后再更新 sort_order，避免立即跳转
+      for (const id of movedIds) {
+        moveToTop(id);
+      }
     }
 
     function updateSelectedFromAniList() {
@@ -1067,20 +1074,20 @@
       if (!await showConfirm('确定将已选的 ' + batchSelected.size + ' 部番剧状态改为「' + status + '」？', '批量操作确认', '📋')) return;
 
       const ids = Array.from(batchSelected);
-      const minOrder = allAnimes.length > 0 ? Math.min(...allAnimes.map(a => a.sort_order || 0)) : 0;
       let success = 0;
-      for (let i = 0; i < ids.length; i++) {
-        const { error } = await supabaseClient.from('animes').update({ status, sort_order: minOrder - 1 - i }).eq('id', ids[i]);
-        if (!error) {
-          const anime = allAnimes.find(a => a.id === ids[i]);
-          if (anime) { anime.status = status; anime.sort_order = minOrder - 1 - i; }
-          success++;
-        }
+      for (const id of ids) {
+        const { error } = await supabaseClient.from('animes').update({ status }).eq('id', id);
+        if (!error) success++;
       }
       showToast('✅ 已更新 ' + success + '/' + ids.length + ' 部', 'success');
       batchSelected.clear();
       toggleBatchMode();  // 退出批量模式
-      loadAnimes();
+      await loadAnimes();
+      // 静默置顶：在 loadAnimes 之后更新 sort_order，避免立即跳转
+      const minOrder = allAnimes.length > 0 ? Math.min(...allAnimes.map(a => a.sort_order || 0)) : 0;
+      for (let i = 0; i < ids.length; i++) {
+        moveToTop(ids[i]); // 每次都会重新计算 minOrder
+      }
     }
 
     // ===== 自定义下拉选择器 =====
