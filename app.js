@@ -426,15 +426,11 @@
       if (editedId) moveToTop(editedId); // 静默置顶，下次刷新/切分类后生效
     }
 
-    // 将番剧移到默认排序的最上面
+    // 将番剧移到默认排序最上面（仅写 DB，不改本地状态，
+    // 等下次 loadAnimes / 刷新 / 切分类后才在新位置显示）
     async function moveToTop(id) {
       const minOrder = allAnimes.length > 0 ? Math.min(...allAnimes.map(a => a.sort_order || 0)) : 0;
       const newOrder = minOrder - 1;
-      const idx = allAnimes.findIndex(a => a.id === id);
-      if (idx !== -1) {
-        allAnimes[idx].sort_order = newOrder;
-        localStorage.setItem('anime-tracker-cache', JSON.stringify(allAnimes));
-      }
       await supabaseClient.from('animes').update({ sort_order: newOrder }).eq('id', id);
     }
 
