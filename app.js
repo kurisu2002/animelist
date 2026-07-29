@@ -1015,7 +1015,7 @@
     }
 
     // ===== 收藏筛选 =====
-    function filterFavorites() {
+    async function filterFavorites() {
       favFilter = !favFilter;
       document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
       const cards = document.querySelectorAll('.stat-card');
