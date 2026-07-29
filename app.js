@@ -447,28 +447,32 @@
       }
 
       // 进度调整时自动切换状态：0→想看 / 中间→在看 / 满→看完
+      // 自动状态只写 DB，不更新本地，等切换类别/刷新后才在新分类显示
+      let autoStatus = null;
       if (field === 'watched_episodes') {
         const anime = allAnimes.find(a => a.id === id);
         const newWatched = updateData.watched_episodes;
         if (newWatched === 0) {
-          updateData.status = '想看';
+          autoStatus = '想看';
         } else if (anime && anime.total_episodes && newWatched >= anime.total_episodes) {
-          updateData.status = '看完';
+          autoStatus = '看完';
         } else if (newWatched > 0) {
-          updateData.status = '在看';
+          autoStatus = '在看';
         }
+        if (autoStatus) updateData.status = autoStatus;
       }
 
-      // 乐观更新（先更新本地再同步，含自动状态变更）
+      // 乐观更新本地（不含自动状态，保持在当前分类视图中）
+      const localUpdate = { ...updateData };
+      if (autoStatus) delete localUpdate.status;
       const idx = allAnimes.findIndex(a => a.id === id);
-      const autoStatusChanged = updateData.status && idx !== -1 && allAnimes[idx].status !== updateData.status;
       if (idx !== -1) {
-        allAnimes[idx] = { ...allAnimes[idx], ...updateData };
+        allAnimes[idx] = { ...allAnimes[idx], ...localUpdate };
         localStorage.setItem('anime-tracker-cache', JSON.stringify(allAnimes));
         renderTable();
       }
-      if (autoStatusChanged) {
-        showToast('📌 状态已自动改为「' + updateData.status + '」', 'success');
+      if (autoStatus && idx !== -1 && allAnimes[idx].status !== autoStatus) {
+        showToast('📌 状态已自动改为「' + autoStatus + '」（切分类后生效）', 'success');
       }
 
       const { error } = await supabaseClient.from('animes').update(updateData).eq('id', id);
