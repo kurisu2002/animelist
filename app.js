@@ -1933,9 +1933,6 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
     function refreshQuote() {
       if (quoteAborter) { quoteAborter.abort(); }
       quoteAborter = new AbortController();
-
-      document.getElementById('daily-text').textContent = '加载中...';
-      document.getElementById('daily-from').textContent = '';
       fetchQuote(quoteAborter.signal);
     }
 
