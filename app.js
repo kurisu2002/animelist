@@ -255,7 +255,7 @@
         if (cached) {
           allAnimes = JSON.parse(cached);
           const hashFilter = restoreFilterFromHash();
-          if (hashFilter !== '全部') { filterByStatus(hashFilter); } else { renderTable(); }
+          if (hashFilter !== '全部') { filterByStatus(hashFilter, true); } else { renderTable(); }
         }
         return;
       }
@@ -278,7 +278,10 @@
           supabaseClient.auth.getSession().then(({ data }) => {
             if (data.session) {
               updateUserUI();
-              loadAnimes();
+              loadAnimes().then(() => {
+                const hashFilter = restoreFilterFromHash();
+                if (hashFilter !== '全部') { filterByStatus(hashFilter, true); }
+              });
             } else {
               showAuthModal();
               // 加载本地缓存
@@ -286,7 +289,7 @@
               if (cached) {
                 allAnimes = JSON.parse(cached);
                 const hashFilter = restoreFilterFromHash();
-                if (hashFilter !== '全部') { filterByStatus(hashFilter); } else { renderTable(); }
+                if (hashFilter !== '全部') { filterByStatus(hashFilter, true); } else { renderTable(); }
               }
             }
           });
@@ -337,13 +340,7 @@
       allAnimes = data || [];
       // 缓存到本地
       localStorage.setItem('anime-tracker-cache', JSON.stringify(allAnimes));
-      // 恢复 URL hash 中的筛选状态
-      const hashFilter = restoreFilterFromHash();
-      if (hashFilter !== '全部') {
-        filterByStatus(hashFilter);
-      } else {
-        renderTable();
-      }
+      renderTable();
     }
 
     function autoSetWatched() {
@@ -1033,7 +1030,7 @@
         document.querySelector('.custom-select-trigger').textContent = '📋 全部状态';
       }
       currentPage = 1;
-      renderTable();
+      await loadAnimes(); // 重新拉取 DB，使置顶和自动状态生效
       if (favFilter) showToast('⭐ 已筛选收藏（再点一次取消）', 'success');
     }
 
@@ -1131,7 +1128,7 @@
       }
     });
 
-    function filterByStatus(status) {
+    async function filterByStatus(status, skipReload = false) {
       // 点击已激活的卡片 → 取消筛选，回到全部
       const statIndex = { '全部': 0, '在看': 1, '想看': 2, '看完': 3, '搁置': 4, '收藏': 5 };
       const cards = document.querySelectorAll('.stat-card');
@@ -1162,7 +1159,11 @@
         cards[statIndex[status]].classList.add('active');
       }
       currentPage = 1;
-      renderTable();
+      if (skipReload) {
+        renderTable(); // 使用当前缓存数据，不重新拉取
+      } else {
+        await loadAnimes(); // 重新拉取 DB，使置顶和自动状态生效
+      }
     }
 
     // 页面加载时恢复 URL hash 中的筛选状态
@@ -1194,9 +1195,9 @@
       container.innerHTML = html;
     }
 
-    function goToPage(page) {
+    async function goToPage(page) {
       currentPage = page;
-      renderTable();
+      await loadAnimes(); // 重新拉取 DB，使置顶和自动状态生效
       document.querySelector('.table-wrapper').scrollIntoView({ behavior: 'smooth' });
     }
 
