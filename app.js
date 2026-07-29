@@ -446,7 +446,7 @@
         updateData[field] = value;
       }
 
-      // 进度调整为 0 或 100% 时自动切换状态
+      // 进度调整时自动切换状态：0→想看 / 中间→在看 / 满→看完
       if (field === 'watched_episodes') {
         const anime = allAnimes.find(a => a.id === id);
         const newWatched = updateData.watched_episodes;
@@ -454,6 +454,8 @@
           updateData.status = '想看';
         } else if (anime && anime.total_episodes && newWatched >= anime.total_episodes) {
           updateData.status = '看完';
+        } else if (newWatched > 0) {
+          updateData.status = '在看';
         }
       }
 
