@@ -423,11 +423,15 @@
       if (editedId) moveToTop(editedId); // 静默置顶，下次刷新/切分类后生效
     }
 
-    // 将番剧移到默认排序最上面（仅写 DB，不改本地状态，
-    // 等下次 loadAnimes / 刷新 / 切分类后才在新位置显示）
+    // 将番剧移到默认排序最上面
     async function moveToTop(id) {
       const minOrder = allAnimes.length > 0 ? Math.min(...allAnimes.map(a => a.sort_order || 0)) : 0;
       const newOrder = minOrder - 1;
+      const idx = allAnimes.findIndex(a => a.id === id);
+      if (idx !== -1) {
+        allAnimes[idx].sort_order = newOrder;
+        localStorage.setItem('anime-tracker-cache', JSON.stringify(allAnimes));
+      }
       await supabaseClient.from('animes').update({ sort_order: newOrder }).eq('id', id);
     }
 
@@ -444,7 +448,6 @@
       }
 
       // 进度调整时自动切换状态：0→想看 / 中间→在看 / 满→看完
-      // 自动状态只写 DB，不更新本地，等切换类别/刷新后才在新分类显示
       let autoStatus = null;
       if (field === 'watched_episodes') {
         const anime = allAnimes.find(a => a.id === id);
@@ -459,17 +462,16 @@
         if (autoStatus) updateData.status = autoStatus;
       }
 
-      // 乐观更新本地（不含自动状态，保持在当前分类视图中）
-      const localUpdate = { ...updateData };
-      if (autoStatus) delete localUpdate.status;
+      // 乐观更新本地（同步状态和进度，但不在本次 renderTable 中改变排序/分类）
       const idx = allAnimes.findIndex(a => a.id === id);
+      const oldStatus = idx !== -1 ? allAnimes[idx].status : null;
       if (idx !== -1) {
-        allAnimes[idx] = { ...allAnimes[idx], ...localUpdate };
+        allAnimes[idx] = { ...allAnimes[idx], ...updateData };
         localStorage.setItem('anime-tracker-cache', JSON.stringify(allAnimes));
         renderTable();
       }
-      if (autoStatus && idx !== -1 && allAnimes[idx].status !== autoStatus) {
-        showToast('📌 状态已自动改为「' + autoStatus + '」（切分类后生效）', 'success');
+      if (autoStatus && oldStatus && oldStatus !== autoStatus) {
+        showToast('📌 状态已自动改为「' + autoStatus + '」', 'success');
       }
 
       const { error } = await supabaseClient.from('animes').update(updateData).eq('id', id);
@@ -479,9 +481,8 @@
         showToast('更新失败: ' + error.message, 'error');
         loadAnimes(); // 回滚
       } else {
-        // 静默置顶：只更新 sort_order，不立即重新渲染
-        // 等页面刷新 / 切换类别 / 翻页后才在新位置显示
-        moveToTop(id);
+        // 更新 sort_order 到最小值 -1（本地 + DB）
+        await moveToTop(id);
         const rowEl = document.querySelector(`tr[data-id="${id}"]`);
         if (rowEl) { rowEl.classList.add('row-saved'); setTimeout(() => rowEl.classList.remove('row-saved'), 600); }
       }
