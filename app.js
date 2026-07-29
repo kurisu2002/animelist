@@ -450,12 +450,27 @@
         updateData[field] = value;
       }
 
-      // 乐观更新（先更新本地再同步）
+      // 进度调整为 0 或 100% 时自动切换状态
+      if (field === 'watched_episodes') {
+        const anime = allAnimes.find(a => a.id === id);
+        const newWatched = updateData.watched_episodes;
+        if (newWatched === 0) {
+          updateData.status = '想看';
+        } else if (anime && anime.total_episodes && newWatched >= anime.total_episodes) {
+          updateData.status = '看完';
+        }
+      }
+
+      // 乐观更新（先更新本地再同步，含自动状态变更）
       const idx = allAnimes.findIndex(a => a.id === id);
+      const autoStatusChanged = updateData.status && idx !== -1 && allAnimes[idx].status !== updateData.status;
       if (idx !== -1) {
         allAnimes[idx] = { ...allAnimes[idx], ...updateData };
         localStorage.setItem('anime-tracker-cache', JSON.stringify(allAnimes));
         renderTable();
+      }
+      if (autoStatusChanged) {
+        showToast('📌 状态已自动改为「' + updateData.status + '」', 'success');
       }
 
       const { error } = await supabaseClient.from('animes').update(updateData).eq('id', id);
