@@ -35,6 +35,9 @@
               <span class="logout-icon" id="logout-btn" style="display:none;" onclick="event.stopPropagation();logout()" title="登出">🚪</span>
             </div>
           </div>
+          <button class="btn btn-outline btn-sm" onclick="exportBackup()" title="导出全部数据为 JSON 备份">⬇️ 导出</button>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-file').click()" title="从 JSON 备份导入">⬆️ 导入</button>
+          <input type="file" id="import-file" accept=".json,application/json" style="display:none;" onchange="importBackup(this.files[0])">
           <button class="btn btn-primary" onclick="toggleAddPanel()" id="add-btn">➕ 添加新番</button>
         </div>
     </div>
@@ -295,6 +298,7 @@
     <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/search.js"></script>
+  <script src="js/backup.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
