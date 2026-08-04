@@ -1,13 +1,20 @@
 // Cloudflare Pages Function — Bangumi API 代理
 // 搜索中文名 + 并行 v0 详情 → 精简返回
+const CACHE_TTL = 600; // 边缘缓存 10 分钟，降低 Bangumi 限流压力
+
 export async function onRequest(context) {
-  const { request } = context;
+  const { request, ctx } = context;
   const url = new URL(request.url);
   const q = url.searchParams.get('q') || '';
 
   if (!q.trim()) {
     return json({ error: 'Missing q' }, 400);
   }
+
+  // 边缘缓存：相同搜索词直接命中，不再请求 Bangumi
+  const cacheKey = new Request(url.href, { method: 'GET' });
+  const cached = await caches.default.match(cacheKey).catch(() => null);
+  if (cached) return cached;
 
   try {
     // 全局超时 8s，超过则返回已有数据而非崩溃
@@ -23,6 +30,11 @@ export async function onRequest(context) {
       headers: { 'User-Agent': 'AnimeTracker/1.0' },
       signal: AbortSignal.timeout(4000)
     });
+
+    // 限流 / 被拒：返回可辨识错误且不缓存
+    if (searchRes.status === 429 || searchRes.status === 403) {
+      return json({ list: [], error: 'bangumi_rate_limited' }, 502, { 'Cache-Control': 'no-store' });
+    }
     if (!searchRes.ok) throw new Error(`Search HTTP ${searchRes.status}`);
     const searchData = await searchRes.json();
     const items = (searchData.list || []).filter(i => i.type === 2);
@@ -69,11 +81,14 @@ export async function onRequest(context) {
       }
     }));
 
-    return json(
+    const resp = json(
       { list: enriched },
       200,
-      { 'Cache-Control': 'public, max-age=600' }
+      { 'Cache-Control': `public, max-age=${CACHE_TTL}` }
     );
+    // 写入边缘缓存（失败不影响响应）
+    ctx.waitUntil(caches.default.put(cacheKey, resp.clone()).catch(() => {}));
+    return resp;
     })()]);  // 结束 async IIFE 和 Promise.race
 
     return result;
