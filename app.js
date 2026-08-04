@@ -1,8 +1,5 @@
-    // ============================================================
-    // ⚠️ 请替换为你自己的 Supabase 项目信息
-    // ============================================================
-    const SUPABASE_URL = 'https://omiaoaricfqqcvihsspe.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taWFvYXJpY2ZxcWN2aWhzc3BlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDczOTgsImV4cCI6MjEwMDM4MzM5OH0.g-bfyuxo_S8Wtkfx8MZSpOpGLrzdeuQKbIHUhgk8dzA';
+// ???????? app.js ???config.js / utils.js / search.js / app.js?
+
 
     // ============================================================
     // 初始化
@@ -400,6 +397,7 @@
       if (notes) saveData.notes = notes;
       saveData.year = year ? parseInt(year) : null;
       if (anilistId) saveData.anilist_id = parseInt(anilistId);
+      saveData.user_id = session.user.id; // 数据归属当前登录用户（配合 RLS 隔离）
 
       let error;
       const editedId = editingId; // 保存 ID（clearForm 会清掉）
@@ -489,31 +487,6 @@
     }
 
     // 自定义确认弹窗（替代原生 confirm，居中美观）
-    function showConfirm(message, title = '确认', icon = '⚠️') {
-      return new Promise((resolve) => {
-        document.getElementById('confirm-icon').textContent = icon;
-        document.getElementById('confirm-title').textContent = title;
-        document.getElementById('confirm-message').textContent = message;
-        const modal = document.getElementById('confirm-modal');
-        const okBtn = document.getElementById('confirm-ok-btn');
-        const cancelBtn = document.getElementById('confirm-cancel-btn');
-
-        function cleanup() {
-          modal.style.display = 'none';
-          okBtn.removeEventListener('click', onOk);
-          cancelBtn.removeEventListener('click', onCancel);
-        }
-
-        function onOk() { cleanup(); resolve(true); }
-        function onCancel() { cleanup(); resolve(false); }
-
-        okBtn.addEventListener('click', onOk);
-        cancelBtn.addEventListener('click', onCancel);
-        // 点击遮罩层关闭
-        modal.onclick = (e) => { if (e.target === modal) onCancel(); };
-        modal.style.display = 'flex';
-      });
-    }
 
     async function deleteAnime(id) {
       if (!supabaseClient) return;
@@ -722,39 +695,6 @@
     }
 
     // ===== AniList 数据更新（评分 + 总集数） =====
-    function showUpdatePanel() {
-      const old = document.getElementById('update-panel');
-      if (old) old.remove();
-      const bar = document.createElement('div');
-      bar.id = 'update-panel';
-      bar.innerHTML = '<div id="update-msg">🔄 准备中...</div><div class="progress-bar-wrap" style="width:100%;height:4px;margin-top:4px;"><div id="update-fill" class="progress-bar-fill" style="width:0%"></div></div><div id="update-detail" style="font-size:.7rem;color:var(--text-secondary);"></div>';
-      Object.assign(bar.style, {
-        position:'fixed',bottom:'60px',right:'16px',zIndex:'9999',
-        background:'var(--card-bg)',border:'1px solid var(--border)',
-        borderRadius:'8px',padding:'10px 14px',boxShadow:'var(--shadow-lg)',
-        minWidth:'240px',maxWidth:'320px',fontSize:'.82rem'
-      });
-      document.body.appendChild(bar);
-      return {
-        set: (i, total, detail, changed) => {
-          const pct = total > 0 ? Math.round((i/total)*100) : 0;
-          const f = document.getElementById('update-fill');
-          if (f) f.style.width = pct+'%';
-          const m = document.getElementById('update-msg');
-          if (m) m.textContent = `🔄 ${i}/${total} · 已更新 ${changed} 项`;
-          const d = document.getElementById('update-detail');
-          if (d) d.textContent = detail || '';
-        },
-        done: (total, changed) => {
-          const m = document.getElementById('update-msg');
-          if (m) m.textContent = `✅ 完成！${total} 部中更新了 ${changed} 部`;
-          const d = document.getElementById('update-detail');
-          if (d) d.textContent = '';
-          setTimeout(() => bar.remove(), 5000);
-        },
-        remove: () => bar.remove()
-      };
-    }
 
     async function updateFromAniList(ids) {
       if (!supabaseClient) { showToast('⚠️ 未连接数据库', 'error'); return; }
@@ -1429,253 +1369,10 @@ const yearHtml = item.year ? `<span class="title-year" onclick="event.stopPropag
       span.style.display = '';
     }
 
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    function showToast(message, type = 'success') {
-      const container = document.getElementById('toast-container');
-      const toast = document.createElement('div');
-      toast.className = 'toast ' + type;
-      toast.textContent = message;
-      container.appendChild(toast);
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity .3s';
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
-
-      // 限制 toast 数量
-      if (container.children.length > 5) {
-        container.firstChild.remove();
-      }
-    }
-
-    // ============================================================
-    // 动画数据库搜索 (Bangumi 优先 + AniList 备用)
-    // ============================================================
-    let searchTimer = null;
-    let searchId = 0;  // 请求编号，避免旧请求覆盖新结果
-    const animeSearchInput = document.getElementById('anime-search');
-    const searchResults = document.getElementById('search-results');
-
-    animeSearchInput.addEventListener('input', function() {
-      const query = this.value.trim();
-      if (query.length < 2) {
-        searchResults.classList.remove('open');
-        return;
-      }
-      clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => {
-        const id = ++searchId;
-        searchAnime(query, id);
-      }, 300);
-    });
-
-    document.addEventListener('click', function(e) {
-      if (!e.target.closest('.anime-search-wrap')) {
-        searchResults.classList.remove('open');
-      }
-    });
-
-    async function searchAnime(query, id) {
-      searchResults.classList.add('open');
-      searchResults.innerHTML = '<div class="search-loading">🔍 搜索中...</div>';
-
-      // 同时请求 Bangumi 和 AniList（合并展示，互补数据）
-      const [bgmResult, anilistResult] = await Promise.all([
-        searchBangumi(query),
-        searchAniList(query)
-      ]);
-      if (id !== searchId) return;  // 已有新搜索，丢弃旧结果
-
-      const combined = [bgmResult, anilistResult].filter(Boolean).join('');
-      if (combined) {
-        searchResults.innerHTML = combined;
-      } else {
-        searchResults.innerHTML = '<div class="search-loading">⚠️ 搜索失败，请检查网络或手动填写</div>';
-      }
-    }
-
-    async function searchBangumi(query) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 6000);
-        // 通过 Netlify Function 代理访问 Bangumi API（绕过 GFW）
-        const res = await fetch(
-          '/api/bangumi-proxy?q=' + encodeURIComponent(query),
-          { signal: controller.signal }
-        );
-        clearTimeout(timeout);
-        const json = await res.json();
-        const items = json.list || [];
-
-        if (items.length === 0) return null;
-
-        return items.map(item => {
-          const cnTitle = item.name_cn || '';
-          const jpTitle = item.name || '';
-          const mainTitle = cnTitle || jpTitle || '未知';
-          const subTitle = cnTitle && jpTitle && cnTitle !== jpTitle ? jpTitle : '';
-          const eps = item.eps_count || '?';
-          const thumb = item.thumb || '';       // 小图：搜索列表显示
-          const poster = item.poster || '';     // 大图：选番后填入表单
-          const score = item.score || '';
-          const date = item.air_date || '';
-          const bgmYear = (date || '').substring(0, 4); // 从 "2024-01-15" 提取年份
-
-          return `
-            <div class="search-result-item" onclick="selectAnimeBgm(${item.id})"
-                 data-id="${item.id}"
-                 data-title="${escapeAttr(mainTitle)}"
-                 data-episodes="${eps}"
-                 data-poster="${escapeAttr(poster)}"
-                 data-rating="${score}"
-                 data-year="${bgmYear}"
-                 data-jp-name="${escapeAttr(jpTitle)}">
-              ${thumb ? `<img src="${thumb}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">` : '<div style="width:40px;height:56px;background:var(--border);border-radius:4px;flex-shrink:0;"></div>'}
-              <div class="search-result-info">
-                <div class="title">🇨🇳 ${mainTitle}${subTitle ? ' <small style="color:var(--text-secondary);">/ ' + subTitle + '</small>' : ''}</div>
-                <div class="meta">📅 ${date || '-'} · 📖 ${eps}集 · ⭐ ${score || '-'}</div>
-              </div>
-            </div>
-          `;
-        }).join('');
-      } catch (e) {
-        return null;
-      }
-    }
-
-    async function searchAniList(query) {
-      try {
-        const gqlQuery = `
-          query ($s: String) {
-            Page(page: 1, perPage: 8) {
-              media(search: $s, type: ANIME, sort: POPULARITY_DESC) {
-                id title { english romaji native }
-                episodes coverImage { large } averageScore seasonYear format
-              }
-            }
-          }`;
-        const res = await fetch('https://graphql.anilist.co', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: gqlQuery, variables: { s: query } })
-        });
-        const json = await res.json();
-        const items = (json.data?.Page?.media || []).filter(m => m.format !== 'MUSIC');
-
-        if (items.length === 0) return null;
-
-        return items.map(item => {
-          const nativeTitle = item.title?.native || '';
-          const engTitle = item.title?.english || item.title?.romaji || '';
-          const mainTitle = nativeTitle || engTitle || '未知';
-          const subTitle = nativeTitle && engTitle ? engTitle : '';
-          const eps = item.episodes || '?';
-          const poster = item.coverImage?.large || '';
-          const score = item.averageScore ? (item.averageScore / 10).toFixed(1) : '';
-
-          return `
-            <div class="search-result-item" onclick="selectAnime(${item.id})"
-                 data-malid="${item.id}"
-                 data-title="${escapeAttr(mainTitle)}"
-                 data-episodes="${eps}"
-                 data-poster="${escapeAttr(poster)}"
-                 data-rating="${score}"
-                 data-year="${item.seasonYear || ''}">
-              ${poster ? `<img src="${poster}" alt="" loading="lazy" decoding="async" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 56%22><rect fill=%22%23ddd%22 width=%2240%22 height=%2256%22/></svg>'">` : '<div style="width:40px;height:56px;background:var(--border);border-radius:4px;"></div>'}
-              <div class="search-result-info">
-                <div class="title">${mainTitle}${subTitle ? ' <small style="color:var(--text-secondary);">/ ' + subTitle + '</small>' : ''}</div>
-                <div class="meta">📺 ${item.format||''} · 📅 ${item.seasonYear||''} · 📖 ${eps}集 · ⭐ ${score||'-'}</div>
-              </div>
-            </div>
-          `;
-        }).join('');
-      } catch (e) {
-        return null;
-      }
-    }
-
-    // Bangumi 点击选择
-    function selectAnimeBgm(id) {
-      const item = document.querySelector(`.search-result-item[data-id="${id}"]`);
-      if (!item) return;
-      document.getElementById('input-title').value = item.dataset.title;
-      document.getElementById('input-total').value = item.dataset.episodes !== '?' ? item.dataset.episodes : '';
-      document.getElementById('input-poster').value = item.dataset.poster || '';
-      if (item.dataset.year) {
-        document.getElementById('input-year').value = item.dataset.year;
-      }
-      if (item.dataset.rating) {
-        document.getElementById('input-rating').value = parseFloat(item.dataset.rating).toFixed(1);
-      }
-      // 清空旧的 AniList ID（Bangumi 结果需重新反查）
-      document.getElementById('input-anilist-id').value = '';
-      searchResults.classList.remove('open');
-      animeSearchInput.value = '';
-      // 用 Bangumi 日文名反查 AniList ID（供后续精确更新）
-      if (item.dataset.jpName) {
-        fetchAniListId(item.dataset.jpName).then(alid => {
-          if (alid) document.getElementById('input-anilist-id').value = alid;
-        });
-      }
-      showToast('✅ 已自动填充「' + item.dataset.title + '」', 'success');
-    }
-
-    async function fetchAniListId(name) {
-      try {
-        const q = `query($s:String){Page(page:1,perPage:1){media(search:$s,type:ANIME){id}}}`;
-        const res = await fetch('https://graphql.anilist.co', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: q, variables: { s: name } })
-        });
-        const json = await res.json();
-        return json?.data?.Page?.media?.[0]?.id || null;
-      } catch (e) { return null; }
-    }
-
-    function selectAnime(malId) {
-      const item = document.querySelector(`.search-result-item[data-malid="${malId}"]`);
-      if (!item) return;
-
-      document.getElementById('input-title').value = item.dataset.title;
-      document.getElementById('input-total').value = item.dataset.episodes !== '?' ? item.dataset.episodes : '';
-      document.getElementById('input-poster').value = item.dataset.poster || '';
-      if (item.dataset.year) {
-        document.getElementById('input-year').value = item.dataset.year;
-      }
-      if (item.dataset.rating) {
-        document.getElementById('input-rating').value = parseFloat(item.dataset.rating).toFixed(1);
-      }
-      if (item.dataset.synopsis) {
-        document.getElementById('input-notes').value = item.dataset.synopsis.substring(0, 200);
-      }
-      // 存储 AniList ID 供后续精确更新
-      document.getElementById('input-anilist-id').value = item.dataset.malid || '';
-
-      searchResults.classList.remove('open');
-      animeSearchInput.value = '';
-      showToast('✅ 已自动填充「' + item.dataset.title + '」', 'success');
-    }
-
-    function escapeAttr(str) {
-      return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
 
     // ============================================================
     // Lightbox - 封面大图预览
     // ============================================================
-    function openLightbox(url) {
-      document.getElementById('lightbox-img').src = url;
-      document.getElementById('lightbox').style.display = 'flex';
-    }
-    function closeLightbox() {
-      document.getElementById('lightbox').style.display = 'none';
-      document.getElementById('lightbox-img').src = '';
-    }
 
     // ============================================================
     // 拖动排序（桌面拖动 + 移动端长按拖动）
