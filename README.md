@@ -78,8 +78,9 @@ CREATE TABLE animes (
 ```
 
 3. 启用 **Row Level Security** 并添加策略（或保持公开访问用于个人项目）
-4. 在 **Authentication > Settings** 中启用 Email 登录
-5. 复制 **Project URL** 和 **anon public key**
+4. **（推荐）执行 `supabase/migrations/0001_user_isolation.sql`**：添加 `user_id` 列并创建按用户隔离的 RLS 策略，确保每个账号只能读写自己的数据
+5. 在 **Authentication > Settings** 中启用 Email 登录
+6. 复制 **Project URL** 和 **anon public key**
 
 ### 2. 配置项目
 
@@ -101,14 +102,22 @@ npx wrangler pages deploy . --project-name <你的项目名> --branch main
 ```
 animelist/
 ├── index.html          # 主页面
-├── app.js              # 应用逻辑
+├── app.js              # 应用逻辑（主模块）
 ├── style.css           # 样式
-├── supabase.min.js     # Supabase SDK（本地副本）
+├── supabase.min.js     # Supabase SDK（本地副本，更新时替换官方 CDN 最新版）
 ├── manifest.json       # PWA 配置
 ├── background.webp     # 背景图
+├── sw.js               # Service Worker（离线缓存）
+├── _redirects          # Cloudflare Pages 重定向
+├── supabase/
+│   └── migrations/
+│       └── 0001_user_isolation.sql  # 用户数据隔离迁移（user_id + RLS）
 └── functions/
-    └── api/
-        └── bangumi-proxy.js  # Cloudflare Function：Bangumi API 代理
+    ├── api/
+    │   ├── bangumi-proxy.js  # Bangumi 搜索代理（限流处理 + 边缘缓存）
+    │   └── random-quote.js   # 随机动漫台词
+    └── bgm-img/
+        └── [[path]].js       # Bangumi 图片代理
 ```
 
 ## 📄 License
