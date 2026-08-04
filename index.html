@@ -35,9 +35,14 @@
               <span class="logout-icon" id="logout-btn" style="display:none;" onclick="event.stopPropagation();logout()" title="登出">🚪</span>
             </div>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="exportBackup()" title="导出全部数据为 JSON 备份">⬇️ 导出</button>
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-file').click()" title="从 JSON 备份导入">⬆️ 导入</button>
-          <input type="file" id="import-file" accept=".json,application/json" style="display:none;" onchange="importBackup(this.files[0])">
+          <div class="backup-menu-wrap">
+            <button class="btn btn-outline btn-sm" onclick="toggleBackupMenu()" title="数据备份" style="padding:0 6px;min-width:26px;">⋯</button>
+            <div class="backup-menu" id="backup-menu" style="display:none;">
+              <div class="backup-menu-item" onclick="exportBackup();closeBackupMenu()">⬇️ 导出备份</div>
+              <div class="backup-menu-item" onclick="closeBackupMenu();document.getElementById('import-file').click()">⬆️ 导入备份</div>
+            </div>
+            <input type="file" id="import-file" accept=".json,application/json" style="display:none;" onchange="importBackup(this.files[0])">
+          </div>
           <button class="btn btn-primary" onclick="toggleAddPanel()" id="add-btn">➕ 添加新番</button>
         </div>
     </div>

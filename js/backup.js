@@ -105,3 +105,20 @@ async function importBackup(file) {
     loadAnimes();
   }
 }
+// ===== 备份菜单（导出/导入） =====
+function toggleBackupMenu() {
+  const menu = document.getElementById('backup-menu');
+  if (!menu) return;
+  const open = menu.style.display === 'block';
+  closeBackupMenu();
+  if (!open) menu.style.display = 'block';
+}
+
+function closeBackupMenu() {
+  const menu = document.getElementById('backup-menu');
+  if (menu) menu.style.display = 'none';
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.backup-menu-wrap')) closeBackupMenu();
+});
