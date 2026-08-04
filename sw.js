@@ -26,7 +26,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
-      return Promise.all(keys.map(key => caches.delete(key)));
+      return Promise.all(keys.filter(key => key.startsWith('anime-tracker-')).map(key => caches.delete(key)));
     })
   );
   self.clients.claim();
