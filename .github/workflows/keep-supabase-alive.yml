@@ -1,0 +1,32 @@
+name: Keep Supabase Project Active
+
+on:
+  schedule:
+    - cron: "0 2 */3 * *"   # every 3 days (1/4/7/.../28/31 at 02:00 UTC)
+  workflow_dispatch: {}      # manual trigger
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Auth health
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          code=$(curl -sS --max-time 30 -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            "https://omiaoaricfqqcvihsspe.supabase.co/auth/v1/health")
+          echo "auth health HTTP $code"
+          test "$code" != "000"
+
+      - name: Ping Data API
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          code=$(curl -sS --max-time 30 -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            "https://omiaoaricfqqcvihsspe.supabase.co/rest/v1/animes?select=id&limit=1")
+          echo "data api HTTP $code"
+          test "$code" != "000"
