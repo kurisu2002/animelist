@@ -407,11 +407,12 @@
         if (error) { showToast('修改失败: ' + error.message, 'error'); return; }
         showToast('✅ 修改成功！', 'success');
       } else {
-        // 新增模式：插入新记录，sort_order 设为最大值 + 1
-        const maxOrder = allAnimes.length > 0 ? Math.max(...allAnimes.map(a => a.sort_order || 0)) : 0;
-        saveData.sort_order = maxOrder + 1;
+        // 新增模式：排在默认列表最前面
+        const minOrder = allAnimes.length > 0 ? Math.min(...allAnimes.map(a => a.sort_order || 0)) : 0;
+        saveData.sort_order = minOrder - 1;
         ({ error } = await supabaseClient.from('animes').insert(saveData));
         if (error) { showToast('添加失败: ' + error.message, 'error'); return; }
+        currentPage = 1;
         showToast('✅ 添加成功！', 'success');
       }
 
