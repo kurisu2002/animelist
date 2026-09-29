@@ -3,7 +3,7 @@
 const CACHE_TTL = 600; // 边缘缓存 10 分钟，降低 Bangumi 限流压力
 
 export async function onRequest(context) {
-  const { request, ctx } = context;
+  const { request } = context;
   const url = new URL(request.url);
   const q = url.searchParams.get('q') || '';
 
@@ -87,7 +87,7 @@ export async function onRequest(context) {
       { 'Cache-Control': `public, max-age=${CACHE_TTL}` }
     );
     // 写入边缘缓存（失败不影响响应）
-    ctx.waitUntil(caches.default.put(cacheKey, resp.clone()).catch(() => {}));
+    context.waitUntil(caches.default.put(cacheKey, resp.clone()).catch(() => {}));
     return resp;
     })()]);  // 结束 async IIFE 和 Promise.race
 
