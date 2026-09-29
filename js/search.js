@@ -12,13 +12,14 @@
 
     animeSearchInput.addEventListener('input', function() {
       const query = this.value.trim();
+      clearTimeout(searchTimer);
+      const id = ++searchId;
       if (query.length < 2) {
         searchResults.classList.remove('open');
         return;
       }
-      clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {
-        const id = ++searchId;
+        if (id !== searchId || animeSearchInput.value.trim() !== query) return;
         searchAnime(query, id);
       }, 300);
     });
@@ -29,23 +30,34 @@
       }
     });
 
-    async function searchAnime(query, id) {
+    function searchAnime(query, id) {
       searchResults.classList.add('open');
       searchResults.innerHTML = '<div class="search-loading">🔍 搜索中...</div>';
 
-      // 同时请求 Bangumi 和 AniList（合并展示，互补数据）
-      const [bgmResult, anilistResult] = await Promise.all([
-        searchBangumi(query),
-        searchAniList(query)
-      ]);
-      if (id !== searchId) return;  // 已有新搜索，丢弃旧结果
+      // 两个数据源各自完成后立即展示，避免较慢的数据源阻塞已有结果。
+      let bgmResult = '';
+      let anilistResult = '';
+      let completed = 0;
+      const render = () => {
+        if (id !== searchId || animeSearchInput.value.trim() !== query) return;
+        const combined = bgmResult + anilistResult;
+        if (combined) {
+          searchResults.innerHTML = combined;
+        } else if (completed === 2) {
+          searchResults.innerHTML = '<div class="search-loading">⚠️ 未找到结果或数据源暂时不可用，请换个关键词或手动填写</div>';
+        }
+      };
 
-      const combined = [bgmResult, anilistResult].filter(Boolean).join('');
-      if (combined) {
-        searchResults.innerHTML = combined;
-      } else {
-        searchResults.innerHTML = '<div class="search-loading">⚠️ 搜索失败，请检查网络或手动填写</div>';
-      }
+      searchBangumi(query).then(result => {
+        bgmResult = result || '';
+        completed++;
+        render();
+      });
+      searchAniList(query).then(result => {
+        anilistResult = result || '';
+        completed++;
+        render();
+      });
     }
 
     async function searchBangumi(query) {
@@ -111,6 +123,7 @@
         const res = await fetch('https://graphql.anilist.co', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(6000),
           body: JSON.stringify({ query: gqlQuery, variables: { s: query } })
         });
         const json = await res.json();
